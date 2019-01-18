@@ -78,7 +78,7 @@ Public Class DeviceTZBQ
         serverThreadProc()
         ' SendMsgToTZBQDev(tobyte("<TZBQ:STOP," & 0 & ">"))
         log("TZBQ设备连接，服务器主动发送握手命令," & IP & ":" & Port & "," & ip2Address(IP))
-        Sleep(3000)
+        '   Sleep(3000)
         Dim msg As String = getcrcstr("<TZBQ:WSML,0>")
         SendMsgToTZBQDev(tobyte(msg)) '发送握手命令    
         sssjHandleTime = Now

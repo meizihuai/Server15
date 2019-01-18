@@ -89,23 +89,23 @@ Public Class DeviceTSS
         log("TSS设备连接，服务器主动发送握手命令……")
         'log(
         ' SendMsgToTSSDevByString(&H0, "task", "netswitch", "<netswitch:sw=in;>", Nothing)
-        Sleep(3000)
+        ' Sleep(3000)
         'Dim b(9) As Byte
         'For i = 0 To b.Length - 1
         '    b(i) = 1
         'Next
         'myClientSocket.Send(b)
         SendMsgToTSSDevByString(&H0, "DevMsg", "WSZL", "", Nothing)
-        Sleep(3000)
-        If Not isHandledLogin Then
-            Dim th As New Thread(Sub()
-                                     Sleep(7000)
-                                     If Not isHandledLogin Then
-                                         CloseSocket()
-                                     End If
-                                 End Sub)
-            th.Start()
-        End If
+        '  Sleep(3000)
+        'If Not isHandledLogin Then
+        '    Dim th As New Thread(Sub()
+        '                             Sleep(7000)
+        '                             If Not isHandledLogin Then
+        '                                 CloseSocket()
+        '                             End If
+        '                         End Sub)
+        '    th.Start()
+        'End If
     End Sub
 
     Private Sub log(ByVal MainMsg As String)
