@@ -347,7 +347,6 @@ Module Module2
             Dim url As String = "http://int.dpool.sina.com.cn/iplookup/iplookup.php?&ip=" & ip
             url = "http://www.ip138.com/ips1388.asp?ip=" & ip & "&action=2"
             Dim msg As String = GetHTML(url, New CookieContainer, "")
-
             Dim findStr As String = "本站数据"
             Dim str As String = msg.Substring(InStr(msg, findStr), 100)
             Dim a As Integer = InStr(str, "：")
