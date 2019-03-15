@@ -19,7 +19,7 @@ Public Class DailyFreqHelper
     Public Shared Sub StartWork()
         log("每日一谱工作器开启")
         workThread = New Thread(AddressOf WorkLoop)
-        workThread.Start()
+        ' workThread.Start()
     End Sub
     Private Shared Sub WorkLoop()
         Dim sleepTime As Integer = sleepSecond * 1000

@@ -1350,7 +1350,7 @@ Public Class DeviceTSS
                 '    log("饮用前freqStart=" & jsonPP.freqStart)
                 '    log("饮用前freqStep=" & jsonPP.freqStep)
                 'End If
-                DailyFreqHelper.OnDeviceFreq(jsonPP, myDeviceInfo)
+                ' DailyFreqHelper.OnDeviceFreq(jsonPP, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
                 Dim maxCount As Integer = 5000
                 If dataCount > maxCount Then
