@@ -811,15 +811,16 @@ Module Module2
     Public Function SQLGetDT(ByVal CmdString As String) As DataTable
         Dim dt As New DataTable
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
-            SQLCommand.CommandTimeout = 900000
-            'Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
-            Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
-            SQLDataAdapter.Fill(dt)
-            SQL.Close()
-            If IsNothing(dt) Then dt = New DataTable
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
+                SQLCommand.CommandTimeout = 900000
+                'Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
+                Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
+                SQLDataAdapter.Fill(dt)
+                SQL.Close()
+                If IsNothing(dt) Then dt = New DataTable
+            End Using
             Return dt
         Catch ex As Exception
             '  MsgBox(ex.ToString)
@@ -829,14 +830,15 @@ Module Module2
     Public Function SQLIsIn(ByVal CmdString As String) As Boolean
         Dim dt As New DataTable
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
-            SQLCommand.CommandTimeout = 900000
-            'Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
-            Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
-            SQLDataAdapter.Fill(dt)
-            SQL.Close()
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
+                SQLCommand.CommandTimeout = 900000
+                'Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
+                Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
+                SQLDataAdapter.Fill(dt)
+                SQL.Close()
+            End Using
             If IsNothing(dt) Then Return False
             If dt.Rows.Count = 0 Then Return False
             Return True
@@ -849,13 +851,14 @@ Module Module2
     Public Function SQLGetCount(CmdString As String) As Long
         Dim dt As New DataTable
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
-            SQLCommand.CommandTimeout = 900000
-            Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
-            SQLDataAdapter.Fill(dt)
-            SQL.Close()
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
+                SQLCommand.CommandTimeout = 900000
+                Dim SQLDataAdapter As New MySqlDataAdapter(SQLCommand)
+                SQLDataAdapter.Fill(dt)
+                SQL.Close()
+            End Using
             If IsNothing(dt) Then Return 0
             If dt.Rows.Count = 0 Then Return 0
             Dim str As String = dt.Rows(0)(0)
@@ -869,11 +872,12 @@ Module Module2
     End Function
     Public Function SQLCmd(ByVal CmdString As String) As String
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
-            Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
-            SQL.Close()
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
+                Dim ResultRowInt As Integer = SQLCommand.ExecuteNonQuery()
+                SQL.Close()
+            End Using
             Return "success"
         Catch ex As Exception
             Return ex.Message
@@ -883,22 +887,23 @@ Module Module2
         If IsNothing(sqllist) Then Return "sqllist is null"
         If sqllist.Count = 0 Then Return "sqllist.count=0"
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim tx As MySqlTransaction = SQL.BeginTransaction
-            Dim SQLCommand As MySqlCommand = New MySqlCommand()
-            SQLCommand.Connection = SQL
-            SQLCommand.Transaction = tx
-            Dim count As Integer = sqllist.Count
-            For i = 0 To count - 1
-                SQLCommand.CommandText = sqllist(i)
-                SQLCommand.ExecuteNonQuery()
-                If i > 0 And (i Mod 500 = 0 Or i = count - 1) Then
-                    tx.Commit()
-                    tx = SQL.BeginTransaction
-                End If
-            Next
-            SQL.Close()
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim tx As MySqlTransaction = SQL.BeginTransaction
+                Dim SQLCommand As MySqlCommand = New MySqlCommand()
+                SQLCommand.Connection = SQL
+                SQLCommand.Transaction = tx
+                Dim count As Integer = sqllist.Count
+                For i = 0 To count - 1
+                    SQLCommand.CommandText = sqllist(i)
+                    SQLCommand.ExecuteNonQuery()
+                    If i > 0 And (i Mod 500 = 0 Or i = count - 1) Then
+                        tx.Commit()
+                        tx = SQL.BeginTransaction
+                    End If
+                Next
+                SQL.Close()
+            End Using
             Return "success"
         Catch ex As Exception
             Return ex.Message
@@ -931,11 +936,13 @@ Module Module2
     End Function
     Public Function SQLInfo(ByVal CmdString As String) As String
         Try
-            Dim SQL As New MySqlConnection(ConnectSQL)
-            SQL.Open()
-            Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
-            Dim str As String = SQLCommand.ExecuteScalar.ToString
-            SQL.Close()
+            Dim str As String = ""
+            Using SQL As New MySqlConnection(ConnectSQL)
+                SQL.Open()
+                Dim SQLCommand As MySqlCommand = New MySqlCommand(CmdString, SQL)
+                str = SQLCommand.ExecuteScalar.ToString
+                SQL.Close()
+            End Using
             Return str
         Catch ex As Exception
             Return ex.Message

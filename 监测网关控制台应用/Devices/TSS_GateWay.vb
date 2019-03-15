@@ -366,7 +366,6 @@ Public Class TSS_GateWay
     End Sub
     Private Sub SendGetHeartBeat()
         SendMsgToTSSDevByString(&H0, "task", "getheartbeat", "", Nothing)
-
     End Sub
     Private Sub handleTm(ByVal by() As Byte)
         HeartWatcher = 1

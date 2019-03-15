@@ -79,9 +79,8 @@
     <Reference Include="MySql.Data">
       <HintPath>D:\MySql.Data.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\dlls\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -107,6 +106,7 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DailyFreqHelper.vb" />
     <Compile Include="Devices\DeviceTSS.vb" />
     <Compile Include="Devices\DeviceTZBQ.vb" />
     <Compile Include="RMTPClient\RMTPClient.vb" />
@@ -142,7 +142,9 @@
     <Compile Include="Devices\TZBQServer.vb" />
     <Compile Include="Devices\WebSocketServer.vb" />
     <Compile Include="StucClass\DeviceStu.vb" />
+    <Compile Include="StucClass\json_PPSJ.vb" />
     <Compile Include="StucClass\NormalTaskStu.vb" />
+    <Compile Include="StucClass\runLocation.vb" />
     <Compile Include="TaskClass\TaskTSS.vb" />
     <Compile Include="TaskClass\TaskTZBQ.vb" />
   </ItemGroup>

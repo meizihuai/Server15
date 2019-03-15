@@ -26,7 +26,7 @@ Imports System.IO.Compression
 
 Module Module1
 
-    Dim title As String = "Server14 V1.3.4"
+    Dim title As String = "Server14 V1.3.5"
     Dim StartTime As Date
     Dim logLock As Object
     Dim isAutoScrollLog As Boolean = True
@@ -142,6 +142,7 @@ Module Module1
             '作为主服务器
             flag_MzhHandle = False
             log("本服务器作为从主服务")
+            DailyFreqHelper.StartWork()
         End If
 
     End Sub

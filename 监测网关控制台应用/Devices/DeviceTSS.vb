@@ -23,6 +23,8 @@ Imports Newtonsoft.Json.Linq
 Imports System.Deployment
 
 Public Class DeviceTSS
+    Private maxSize As Integer = 81920
+    Public isWorking As Boolean = False
     Private myControlerVersion As String = "null"
     Private workingTask As New NormalTaskStu
     Private legalSigNal As List(Of Double)
@@ -35,7 +37,7 @@ Public Class DeviceTSS
     Private isTZBQ_JCPD As Boolean = False
     Private TZBQ_JCPD_IndexList As List(Of Integer)
     Private TZBQ_JCPDString As String = ""
-    Private myDeviceInfo As New DeviceStu
+    Public myDeviceInfo As New DeviceStu
     Private myRealID As String
     Private myHttpListener As HttpListener
     Private webSocketListener As WebSocketServer
@@ -65,7 +67,7 @@ Public Class DeviceTSS
     Private myFreqInfo As json_PPSJ
     Private flagHaveMyFreqInfo As Boolean = False
     Private TekGateWayDik As New Dictionary(Of String, String) 'Tek设备和网
-    Private myRunLocation As runLocation
+    Private myRunLocation As RunLocation
     Private myRunLocationLock As New Object
     Private lastCarFreqGisTime As Date = Now
     Dim isHandledLogin As Boolean = False
@@ -336,7 +338,7 @@ Public Class DeviceTSS
         End SyncLock
         If isJXX Then
             Dim cls As DeviceTSS = CType(JXXItm.cls, DeviceTSS)
-            cls.CloseALL(True)
+            cls.CloseALL(True, "(挤下线)")
             AddMyLog("重新上线", "成功")
             log("重新上线TSS设备登录，deviceID=" & id)
             StartHttp(cls)
@@ -431,7 +433,7 @@ Public Class DeviceTSS
 
         End Try
     End Sub
-    Dim isWorking As Boolean = False
+
     Private Function GetOrderList(ByVal pds() As String) As List(Of Double)
         Dim ds As New List(Of Double)
         For Each sh In pds
@@ -763,10 +765,10 @@ Public Class DeviceTSS
             End If
         End Try
     End Sub
-    Public Sub CloseALL(ByVal isOld As Boolean)
+    Public Sub CloseALL(ByVal isOld As Boolean, closeMsg As String)
 
         log("TSS_CloseALL-->[" & IP & ":" & Port & "]")
-        AddMyLog("断线", "")
+        AddMyLog("断线" & closeMsg, "")
         Dim oldstr As String = ""
         If isOld Then oldstr = "前者"
         Try
@@ -1068,7 +1070,7 @@ Public Class DeviceTSS
                                 Next
                             End SyncLock
                             SyncLock myRunLocationLock
-                                If IsNothing(myRunLocation) Then myRunLocation = New runLocation
+                                If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
                                 myRunLocation.lng = sh.Lng
                                 myRunLocation.lat = sh.Lat
                                 myRunLocation.lat = sh.Lat
@@ -1200,27 +1202,8 @@ Public Class DeviceTSS
 
         End Try
     End Sub
-    Structure runLocation
-        Dim lng As String
-        Dim lat As String
-        Dim time As String
-        Sub New(ByVal _lng As String, ByVal _lat As String, ByVal _time As String)
-            lng = _lng
-            lat = _lat
-            time = _time
-        End Sub
-    End Structure
-    Structure json_PPSJ
-        Dim freqStart As Double
-        Dim freqStep As Double
-        Dim freqEnd As Double
-        Dim deviceID As String
-        Dim dataCount As Integer
-        Dim runLocation As runLocation
-        Dim value() As Double
-        Dim isDSGFreq As Boolean
-        Dim DSGFreqBase64 As String
-    End Structure
+
+
     Structure DSGFreqDataStu
         Dim freqStart As Double
         Dim freqStep As Double
@@ -1282,17 +1265,16 @@ Public Class DeviceTSS
     End Function
     Private Sub handlePinPuFenXi(ByVal deviceID As String, ByVal PinPuShuJu() As Byte, runLocationJson As String)
         Try
+
             Dim p As ppsj = shuju2ppsj(PinPuShuJu)
             Dim qishi As Double = p.qishipinlv
             Dim bujin As Double = p.bujin
+
             Dim weishu As Integer = p.weishu
             Dim geshu As Integer = 0
             Dim jieshu As Double
             Dim xx() As Double, yy() As Double
-            'If deviceID = "0120170001" Then
-            '    log("freqStart=" & qishi)
-            '    log("freqStep=" & bujin)
-            'End If
+
             Dim jifenleixing As Integer = p.jifenleixing
             If jifenleixing <> 0 Then Exit Sub
             If weishu = 8 Then
@@ -1325,24 +1307,15 @@ Public Class DeviceTSS
             If IsNothing(xx) Or IsNothing(yy) Then Return
             If xx.Count <> yy.Count Then Return
             If xx.Count = 0 Or yy.Count = 0 Then Return
-            'If myDeviceInfo.Name = "长安霄边站" Then
-            '    log(flagHaveMyFreqInfo)
-            '    log(myFreqInfo.freqStart)
-            '    log(myFreqInfo.freqStep)
-            '    log(myFreqInfo.freqEnd)
-            '    log(myFreqInfo.dataCount)
-            'End If
+
             If flagHaveMyFreqInfo Then
                 If myFreqInfo.freqStart = xx(0) Then
                     If Not myFreqInfo.freqEnd = xx(xx.Count - 1) Then
                         Dim tmpFreqStep As Single = myFreqInfo.freqStep
                         Dim bujinFreqStep As Single = bujin * 1000
-                        ' If myDeviceInfo.Name = "长安霄边站" Then log(myFreqInfo.freqStep * 0.001)
                         Dim bool As Boolean = (tmpFreqStep = bujinFreqStep)
                         If bool Then
-                            'If myDeviceInfo.Name = "长安霄边站" Then log(2)
                             If myFreqInfo.dataCount - geshu = 1 Then
-                                '  If myDeviceInfo.Name = "长安霄边站" Then log(3)
                                 geshu = myFreqInfo.dataCount
                                 Dim xTmp(geshu - 1), yTmp(geshu - 1) As Double
                                 For i = 0 To xx.Count - 1
@@ -1364,7 +1337,8 @@ Public Class DeviceTSS
             If IsNothing(yy) Then Exit Sub
             jieshu = xx(xx.Count - 1)
             If isTZBQ_JCPD = False Then
-                Dim jsonPP As json_PPSJ
+
+                Dim jsonPP As New json_PPSJ
                 jsonPP.freqStart = qishi
                 jsonPP.freqStep = bujin
                 jsonPP.freqEnd = jieshu
@@ -1372,6 +1346,11 @@ Public Class DeviceTSS
                 jsonPP.deviceID = myDeviceInfo.DeviceID
                 jsonPP.value = yy
                 jsonPP.runLocation = Nothing
+                'If myDeviceInfo.Name = "长安上沙站" Then
+                '    log("饮用前freqStart=" & jsonPP.freqStart)
+                '    log("饮用前freqStep=" & jsonPP.freqStep)
+                'End If
+                DailyFreqHelper.OnDeviceFreq(jsonPP, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
                 Dim maxCount As Integer = 5000
                 If dataCount > maxCount Then
@@ -1412,7 +1391,7 @@ Public Class DeviceTSS
                         Try
                             Try
                                 ''更新公交实时经纬度
-                                Dim rlc As runLocation = JsonConvert.DeserializeObject(runLocationJson, GetType(runLocation))
+                                Dim rlc As RunLocation = JsonConvert.DeserializeObject(runLocationJson, GetType(RunLocation))
                                 rlc.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
                                 Dim isRefrushGPS As Boolean = False
                                 Dim bool As Boolean = CheckLocation(rlc.lng, rlc.lat)
@@ -1548,7 +1527,6 @@ Public Class DeviceTSS
                 '    For i = 0 To DSGFreqModule.yy.Count - 1
                 '        Dim ModuleValue As Double = DSGFreqModule.yy(i)
                 '        Dim newValue As Double = tmpPP.value(i)
-
                 '    Next
                 'End If
                 Dim jsonmsg As JSON_Msg
@@ -1678,7 +1656,7 @@ Public Class DeviceTSS
                 End If
             End If
         Catch ex As Exception
-            ' log(ex.Message)
+            log(ex.Message)
         End Try
     End Sub
     Private Function IsInLegalSignal(ByVal v As Double) As Boolean
@@ -1769,6 +1747,7 @@ Public Class DeviceTSS
     Private Sub ReceiveCallBack(ByVal ar As IAsyncResult)
         Dim sb As SocketAndBuffer
         sb = CType(ar.AsyncState, SocketAndBuffer)
+        Dim stepp As Integer = 0
         Try
             If sb.Socket.Connected Then
                 iLen = sb.Socket.EndReceive(ar)
@@ -1791,6 +1770,7 @@ Public Class DeviceTSS
                                 head_len = realReadLen
                                 Dim nb() As Byte = byteSub
                                 byteSub = Nothing
+                                stepp = 1
                                 sb.Socket.BeginReceive(sb.Buffer, 0, head_len, SocketFlags.None, AddressOf ReceiveCallBack, sb)
                                 Try
                                     handleTm(nb)
@@ -1802,7 +1782,7 @@ Public Class DeviceTSS
                             If lenofMsg < byteSub.Length Then
                                 'MsgBox("lenofMsg<byteSub.Length")
                                 If (Not myClientSocket Is Nothing) Then
-                                    CloseALL(False)
+                                    CloseALL(False, "ReceiveCallBack lenofMsg<byteSub.Length")
                                 End If
                                 Return
                             End If
@@ -1811,8 +1791,14 @@ Public Class DeviceTSS
                                 Dim num As Integer = lenofMsg - byteSub.Length
                                 flag_isHead = False
                                 body_len = num
+
+
+                                Dim revSize As Integer = num
+                                If revSize > maxSize Then
+                                    revSize = maxSize
+                                End If
                                 'MsgBox("数据包显示 本包 数量比较大，头是已经取完了，body还有数据待取 num=" & num)
-                                sb.Socket.BeginReceive(sb.Buffer, 0, body_len, SocketFlags.None, AddressOf ReceiveCallBack, sb)
+                                sb.Socket.BeginReceive(sb.Buffer, 0, revSize, SocketFlags.None, AddressOf ReceiveCallBack, sb)
                                 Return
                             End If
                         End If
@@ -1828,6 +1814,7 @@ Public Class DeviceTSS
                             Dim str As String = ""
                             'MsgBox("'说明头还没有取完，接着取头 head_len=" & head_len & ",iLen=" & iLen)
                             'head_len变为剩下待取头量
+                            stepp = 3
                             sb.Socket.BeginReceive(sb.Buffer, 0, head_len, SocketFlags.None, AddressOf ReceiveCallBack, sb)
                             Return
                         End If
@@ -1844,6 +1831,7 @@ Public Class DeviceTSS
                             byteSub = Nothing
                             flag_isHead = True
                             head_len = realReadLen
+                            stepp = 4
                             sb.Socket.BeginReceive(sb.Buffer, 0, head_len, SocketFlags.None, AddressOf ReceiveCallBack, sb)
                             Try
                                 handleTm(nb)
@@ -1862,20 +1850,28 @@ Public Class DeviceTSS
                             flag_isHead = False
                             'body_len变为剩下待取body量
                             body_len = body_len - iLen
-                            sb.Socket.BeginReceive(sb.Buffer, 0, body_len, SocketFlags.None, AddressOf ReceiveCallBack, sb)
+                            stepp = 5
+                            Dim revSize As Integer = body_len
+                            If revSize > maxSize Then
+                                revSize = maxSize
+                            End If
+                            sb.Socket.BeginReceive(sb.Buffer, 0, revSize, SocketFlags.None, AddressOf ReceiveCallBack, sb)
                             Return
                         End If
                     End If
                 Else
                     If (Not myClientSocket Is Nothing) Then
-                        CloseALL(False)
+                        CloseALL(False, "ReceiveCallBack iLen=0")
                     End If
                 End If
             End If
         Catch ex As Exception
             '  MsgBox(ex.ToString)
             If (Not myClientSocket Is Nothing) Then
-                CloseALL(False)
+                'Dim str As String = "setpp=" & stepp & vbCrLf & ex.ToString
+                'File.WriteAllText("d:\ReceiveCallBackError.txt", str)
+                CloseALL(False, "ReceiveCallBack error " & ex.Message)
+
             End If
         End Try
     End Sub
@@ -2082,6 +2078,57 @@ Public Class DeviceTSS
 
         End Try
     End Sub
+    Public Function SendOrderFreqToDevice(freqStart As Double, freqEnd As Double, freqStep As Double, gcValue As Double, DHDevice As String) As String
+        SendStop2Device()
+        Sleep(1000)
+        Dim ifbw As String = 40000
+        Dim abw As String = freqStep
+        Dim bits As String = 16
+        Dim gcmode As String = "fagc"
+        Dim returndata As String = "fft"
+        Dim returninter As String = 1
+        Dim detetor As String = "real"
+        If gcValue <> 8 And gcValue <> 16 Then
+            gcValue = 8
+        End If
+        Dim msg As String = "<bscan: tasknum=1" &
+             ";freqbegin=" & freqStart &
+             ";freqend=" & freqEnd &
+              ";freqstep=" & freqStep &
+              ";ifbw=" & ifbw &
+               ";abw=" & abw &
+               ";rbw=" & abw &
+               ";bits=" & bits &
+               ";gcmode=" & gcmode &
+               ";gcvalue=" & gcValue &
+              ";returndata=" & returndata &
+              ";detetor=" & detetor &
+               ";returninter=" & returninter
+        If DSGDeviceKind = "DH" Then
+            If DHDevice = "2to1" Then
+                DHDeviceControlStr = DHDevice
+            End If
+            msg = msg & ";device=" & DHDeviceControlStr & ";>"
+        Else
+            msg = msg & ">"
+        End If
+        ' File.WriteAllText("d:\rrrrrrr.txt", msg)
+        Dim result As String = SendMsgToTSSDevByString(&H0, "task", "bscan", msg, Nothing)
+        'If myDeviceInfo.Name = "长安上沙站" Then
+        '    log(msg)
+        '    log(result)
+        'End If
+        If result.StartsWith("result=success") Then
+            myFreqInfo = New json_PPSJ
+            myFreqInfo.freqStart = freqStart
+            myFreqInfo.freqStep = freqStep
+            myFreqInfo.freqEnd = freqEnd
+            myFreqInfo.dataCount = ((freqEnd - freqStart) / (freqStep * 0.001)) + 1
+            flagHaveMyFreqInfo = True
+        End If
+
+        Return result
+    End Function
     Private Sub handleHttpRequest(ByVal context As HttpListenerContext)
         Try
             Dim GETSTR As String = UrlDecode(context.Request.Url.PathAndQuery)
@@ -2157,54 +2204,14 @@ Public Class DeviceTSS
                 Try
                     Dim tss As tssOrder_stu = JsonConvert.DeserializeObject(msg, GetType(tssOrder_stu))
                     If tss.task = "bscan" Then
-                        SendStop2Device()
-                        Sleep(1000)
+
                         AddMyLog("接收一般命令,频谱扫描", "成功")
                         Dim freqbegin As Double = tss.freqStart
                         Dim freqend As Double = tss.freqEnd
                         Dim freqstep As Double = tss.freqStep
-                        myFreqInfo = New json_PPSJ
-                        myFreqInfo.freqStart = freqbegin
-                        myFreqInfo.freqStep = freqstep
-                        myFreqInfo.freqEnd = freqend
-                        myFreqInfo.dataCount = ((freqend - freqbegin) / (freqstep * 0.001)) + 1
-                        flagHaveMyFreqInfo = True
-                        Dim ifbw As String = 40000
-                        Dim abw As String = freqstep
-                        Dim bits As String = 16
-                        Dim gcmode As String = "fagc"
-                        Dim gcvalue As Double = tss.gcValue
-                        Dim returndata As String = "fft"
-                        Dim returninter As String = 1
-                        Dim detetor As String = "real"
-                        If gcvalue <> 8 And gcvalue <> 16 Then
-                            gcvalue = 8
-                        End If
-                        msg = "<bscan: tasknum=1" &
-                             ";freqbegin=" & freqbegin &
-                             ";freqend=" & freqend &
-                              ";freqstep=" & freqstep &
-                              ";ifbw=" & ifbw &
-                               ";abw=" & abw &
-                               ";rbw=" & abw &
-                               ";bits=" & bits &
-                               ";gcmode=" & gcmode &
-                               ";gcvalue=" & gcvalue &
-                              ";returndata=" & returndata &
-                              ";detetor=" & detetor &
-                               ";returninter=" & returninter
-                        If DSGDeviceKind = "DH" Then
-                            If tss.DHDevice = "2to1" Then
-                                DHDeviceControlStr = tss.DHDevice
-                            End If
-                            msg = msg & ";device=" & DHDeviceControlStr & ";>"
-                        Else
-                            msg = msg & ">"
-                        End If
-                        'log("tss-->bascanOrder--> paramString-->")
-                        'log(msg)
 
-                        response(context, SendMsgToTSSDevByString(&H0, "task", "bscan", msg, Nothing))
+                        Dim orderResult As String = SendOrderFreqToDevice(freqbegin, freqend, freqstep, tss.gcValue, tss.DHDevice)
+                        response(context, orderResult)
                     End If
                     If tss.task = "stop" Then
                         AddMyLog("接收一般命令,停止工作", "成功")
@@ -2444,7 +2451,7 @@ Public Class DeviceTSS
                                              '    lat = wdpoints.y
                                              'End If
                                              SyncLock myRunLocationLock
-                                                 If IsNothing(myRunLocation) Then myRunLocation = New runLocation
+                                                 If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
                                                  myRunLocation.lng = lng
                                                  myRunLocation.lat = lat
                                                  myRunLocation.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
