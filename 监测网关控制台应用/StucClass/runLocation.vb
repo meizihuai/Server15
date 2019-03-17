@@ -10,4 +10,8 @@
         lat = _lat
         time = _time
     End Sub
+    Public Function Copy() As RunLocation
+        If IsNothing(Me) Then Return Nothing
+        Return Me.MemberwiseClone()
+    End Function
 End Class

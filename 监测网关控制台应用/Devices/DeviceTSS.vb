@@ -1350,7 +1350,7 @@ Public Class DeviceTSS
                 '    log("饮用前freqStart=" & jsonPP.freqStart)
                 '    log("饮用前freqStep=" & jsonPP.freqStep)
                 'End If
-                ' DailyFreqHelper.OnDeviceFreq(jsonPP, myDeviceInfo)
+                DailyFreqHelper.OnDeviceFreq(jsonPP.Copy, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
                 Dim maxCount As Integer = 5000
                 If dataCount > maxCount Then
@@ -1656,7 +1656,7 @@ Public Class DeviceTSS
                 End If
             End If
         Catch ex As Exception
-            log(ex.Message)
+            log(ex.ToString)
         End Try
     End Sub
     Private Function IsInLegalSignal(ByVal v As Double) As Boolean
