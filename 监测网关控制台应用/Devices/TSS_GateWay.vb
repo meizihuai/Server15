@@ -433,6 +433,9 @@ Public Class TSS_GateWay
             log("heartBeat sk is null")
             Return
         End If
+        'If myDeviceInfo.DeviceID = "DSG-GW0107" Then
+        '    log("107网关上报心跳包," & st(1))
+        'End If
         If IsNothing(DeviceListLock) Then DeviceListLock = New Object
         SyncLock DeviceListLock
             If IsNothing(DeviceList) Then DeviceList = New List(Of DeviceStu)
@@ -445,6 +448,7 @@ Public Class TSS_GateWay
                     Dim flagHaveLat As Boolean = False
                     Dim flagGpsOK As Boolean = False
                     Dim flagHaveGPSStatus As Boolean = False
+                    Dim gwsinfo As New GateWayStatusInfo
                     Try
                         For Each skt In sk
                             If Not flagIsUseFenHao Then skt = skt.Replace(";", "")
@@ -460,15 +464,25 @@ Public Class TSS_GateWay
                             If k = "swnet" Then
                                 If v = "in" Then sh.NetSwitch = 1
                                 If v = "out" Then sh.NetSwitch = 2
+                                gwsinfo.net = v
+                            End If
+                            If k = "swpow" Then
+                                gwsinfo.power = v
+                            End If
+                            If k = "voltage" Then
+                                If IsNumeric(v) Then
+                                    gwsinfo.voltage = Double.Parse(v)
+                                End If
                             End If
                             If k = "longitude" Then
                                 flagHaveGPSStatus = True
                                 If IsNothing(v) = False Then
                                     If v <> "" Then
                                         If IsNumeric(v) Then
+                                            gwsinfo.lon = Val(v)
                                             flagHaveLng = True
-                                            deviceGPSReporterLat = v  '2018-12-09 设备上报的经纬度是反的，故迎合设备
-                                            ' deviceGPSReporterLng = v
+                                            ' deviceGPSReporterLat = v  '2018-12-09 设备上报的经纬度是反的，故迎合设备
+                                            deviceGPSReporterLng = v
                                         End If
                                     End If
                                 End If
@@ -478,48 +492,71 @@ Public Class TSS_GateWay
                                 If IsNothing(v) = False Then
                                     If v <> "" Then
                                         If IsNumeric(v) Then
+                                            gwsinfo.lat = Val(v)
                                             flagHaveLat = True
-                                            ' deviceGPSReporterLat = v
-                                            deviceGPSReporterLng = v  '2018-12-09 设备上报的经纬度是反的，故迎合设备
+                                            deviceGPSReporterLat = v
+                                            ' deviceGPSReporterLng = v  '2018-12-09 设备上报的经纬度是反的，故迎合设备
                                         End If
                                     End If
                                 End If
                             End If
-                            If k = "lgps_status" Then
-                                flagHaveGPSStatus = True
-                                If IsNothing(v) = False Then
-                                    If v <> "" Then
-                                        If IsNumeric(v) Then
-                                            If v = 1 Then
-                                                flagGpsOK = True
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            End If
+                            flagGpsOK = True
+                            'If k = "lgps_status" Then
+                            '    flagHaveGPSStatus = True
+                            '    If IsNothing(v) = False Then
+                            '        If v <> "" Then
+                            '            If IsNumeric(v) Then
+                            '                If v = 1 Then
+                            '                    flagGpsOK = True
+                            '                End If
+                            '            End If
+                            '        End If
+                            '    End If
+                            'End If
                         Next
                     Catch ex As Exception
                         ' If myDeviceInfo.DeviceID = "DSG-GW0100" Then log(ex.ToString)
                     End Try
-
-
                     Try
                         If flagGpsOK And flagHaveLat And flagHaveLng Then
-                            log("收到网关设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
-                            Dim cinfo As CoordInfo = GPS2BDS(deviceGPSReporterLng, deviceGPSReporterLat)
-                            sh.Lng = cinfo.x
-                            sh.Lat = cinfo.y
-                            SyncLock TekBusDevicesLock
-                                For j = 0 To TekBusDevices.Count - 1
-                                    Dim itm As TekBusDeviceInfo = TekBusDevices(j)
-                                    If itm.GwDeviceId = myDeviceInfo.DeviceID Then
-                                        itm.gpsTime = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                        itm.GwCoordinfo = cinfo
-                                        TekBusDevices(j) = itm
-                                        Exit For
-                                    End If
-                                Next
-                            End SyncLock
+                            If deviceGPSReporterLng > 0 And deviceGPSReporterLat > 0 Then
+                                If deviceGPSReporterLat > deviceGPSReporterLng Then
+                                    'log("经纬度需要转置，deviceId=" & myDeviceInfo.DeviceID)
+                                    Dim t As Double = deviceGPSReporterLat
+                                    deviceGPSReporterLat = deviceGPSReporterLng
+                                    deviceGPSReporterLng = t
+                                End If
+                                Dim cinfo As CoordInfo = GPS2BDS(deviceGPSReporterLng, deviceGPSReporterLat)
+                                gwsinfo.lon = cinfo.x
+                                gwsinfo.lat = cinfo.y
+                                deviceGPSReporterLng = cinfo.x
+                                deviceGPSReporterLat = cinfo.y
+                                log("收到网关设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
+
+                                sh.Lng = gwsinfo.lon
+                                sh.Lat = gwsinfo.lat
+                                SyncLock TekBusDevicesLock
+                                    For j = 0 To TekBusDevices.Count - 1
+                                        Dim itm As TekBusDeviceInfo = TekBusDevices(j)
+                                        If itm.GwDeviceId = myDeviceInfo.DeviceID Then
+                                            Dim tekDeviceId As String = itm.TekDeviceId
+                                            SyncLock DeviceListLock
+                                                For m = 0 To DeviceList.Count - 1
+                                                    Dim d As DeviceStu = DeviceList(m)
+                                                    If d.DeviceID = tekDeviceId Then
+                                                        Dim cls As DeviceTSS = d.cls
+                                                        If IsNothing(cls) = False Then
+                                                            cls.SetmyRunLocation(New RunLocation(deviceGPSReporterLng, deviceGPSReporterLat, Now.ToString("yyyy-MM-dd HH:mm:ss")))
+                                                        End If
+                                                        Exit For
+                                                    End If
+                                                Next
+                                            End SyncLock
+                                            Exit For
+                                        End If
+                                    Next
+                                End SyncLock
+                            End If
                             'Dim sqlTmp As String = "update deviceTable set Lng='{0}',Lat='{1}' where DeviceID='{2}'"
                             'sqlTmp = String.Format(sqlTmp, New String() {sh.Lng, sh.Lat, sh.DeviceID})
                             'SQLCmd(sqlTmp)
@@ -531,6 +568,7 @@ Public Class TSS_GateWay
                     Catch ex As Exception
 
                     End Try
+                    sh.DSGWGstatus = gwsinfo
                     DeviceList(i) = sh
                     Exit For
                 End If

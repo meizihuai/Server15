@@ -66,7 +66,7 @@ Public Class DeviceTSS
     Private freqGisBusLineId As String
     Private myFreqInfo As json_PPSJ
     Private flagHaveMyFreqInfo As Boolean = False
-    Private TekGateWayDik As New Dictionary(Of String, String) 'Tek设备和网
+
     Private myRunLocation As RunLocation
     Private myRunLocationLock As New Object
     Private lastCarFreqGisTime As Date = Now
@@ -81,10 +81,7 @@ Public Class DeviceTSS
         myClientSocket = ClientSocket
         IP = myClientSocket.RemoteEndPoint.ToString.Split(":")(0)
         Port = myClientSocket.RemoteEndPoint.ToString.Split(":")(1)
-        TekGateWayDik.Add("Tek180508", "DSG-GW0101")
-        TekGateWayDik.Add("Tek180509", "DSG-GW0102")
-        TekGateWayDik.Add("Tek180510", "DSG-GW0103")
-        TekGateWayDik.Add("Tek180511", "DSG-GW0100")
+
     End Sub
     Public Sub Start()
         serverThreadProc()
@@ -915,7 +912,7 @@ Public Class DeviceTSS
                 If is701Device Then
                     device701FreqReSendCount = 0
                 End If
-                handlePinPuFenXi(tm.deviceID, tm.shujuqu, tm.canshuqu)
+                handlePinPuFenXi(tm.deviceID, tm.shujuqu, "")
                 Return
             End If
         End If
@@ -925,7 +922,7 @@ Public Class DeviceTSS
                     If is701Device Then
                         device701FreqReSendCount = 0
                     End If
-                    handlePinPuFenXi(tm.deviceID, tm.shujuqu, tm.canshuqu)
+                    handlePinPuFenXi(tm.deviceID, tm.shujuqu, "")
 
                     Return
                 End If
@@ -1036,53 +1033,65 @@ Public Class DeviceTSS
                                     End If
                                 End If
                             End If
-                            If k = "lgps_status" Then
-                                flagHaveGPSStatus = True
-                                If IsNothing(v) = False Then
-                                    If v <> "" Then
-                                        If IsNumeric(v) Then
-                                            If v = 1 Then
-                                                flagGpsOK = True
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            End If
+
+                            flagGpsOK = True
+                            'If k = "lgps_status" Then
+                            '    flagHaveGPSStatus = True
+                            '    If IsNothing(v) = False Then
+                            '        If v <> "" Then
+                            '            If IsNumeric(v) Then
+                            '                If v = 1 Then
+                            '                    flagGpsOK = True
+                            '                End If
+                            '            End If
+                            '        End If
+                            '    End If
+                            'End If
                         Next
                     Catch ex As Exception
                         ' If myDeviceInfo.DeviceID = "DSG-GW0100" Then log(ex.ToString)
                     End Try
                     Try
                         If flagGpsOK And flagHaveLat And flagHaveLng Then
-                            log("收到TSS设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
-                            Dim cinfo As CoordInfo = GPS2BDS(deviceGPSReporterLng, deviceGPSReporterLat)
-                            sh.Lng = cinfo.x
-                            sh.Lat = cinfo.y
-                            SyncLock TekBusDevicesLock
-                                For j = 0 To TekBusDevices.Count - 1
-                                    Dim itm As TekBusDeviceInfo = TekBusDevices(j)
-                                    If itm.HDeviceId = myDeviceInfo.DeviceID Then
-                                        itm.gpsTime = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                        itm.HkCoordinfo = cinfo
-                                        TekBusDevices(j) = itm
-                                        Exit For
-                                    End If
-                                Next
-                            End SyncLock
-                            SyncLock myRunLocationLock
-                                If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
-                                myRunLocation.lng = sh.Lng
-                                myRunLocation.lat = sh.Lat
-                                myRunLocation.lat = sh.Lat
-                                myRunLocation.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                            End SyncLock
-                            Try
-                                Dim sqlTmp As String = "update deviceTable set Lng='{0}',Lat='{1}' where DeviceID='{2}'"
-                                sqlTmp = String.Format(sqlTmp, New String() {sh.Lng, sh.Lat, sh.DeviceID})
-                                SQLCmd(sqlTmp)
-                            Catch ex As Exception
+                            If deviceGPSReporterLng > 0 And deviceGPSReporterLat > 0 Then
+                                If deviceGPSReporterLat > deviceGPSReporterLng Then
+                                    ' log("经纬度需要转置，deviceId=" & myDeviceInfo.DeviceID)
+                                    Dim t As Double = deviceGPSReporterLat
+                                    deviceGPSReporterLat = deviceGPSReporterLng
+                                    deviceGPSReporterLng = t
+                                End If
+                                Dim cinfo As CoordInfo = GPS2BDS(deviceGPSReporterLng, deviceGPSReporterLat)
+                                deviceGPSReporterLng = cinfo.x
+                                deviceGPSReporterLat = cinfo.y
+                                sh.Lng = deviceGPSReporterLng
+                                sh.Lat = deviceGPSReporterLat
+                                SyncLock TekBusDevicesLock
+                                    For j = 0 To TekBusDevices.Count - 1
+                                        Dim itm As TekBusDeviceInfo = TekBusDevices(j)
+                                        If itm.HDeviceId = myDeviceInfo.DeviceID Then
+                                            itm.gpsTime = Now.ToString("yyyy-MM-dd HH:mm:ss")
+                                            itm.HkCoordinfo = cinfo
+                                            TekBusDevices(j) = itm
+                                            Exit For
+                                        End If
+                                    Next
+                                End SyncLock
+                                SyncLock myRunLocationLock
+                                    If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
+                                    myRunLocation.lng = sh.Lng
+                                    myRunLocation.lat = sh.Lat
+                                    myRunLocation.lat = sh.Lat
+                                    myRunLocation.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
+                                End SyncLock
+                                Try
+                                    Dim sqlTmp As String = "update deviceTable set Lng='{0}',Lat='{1}' where DeviceID='{2}'"
+                                    sqlTmp = String.Format(sqlTmp, New String() {sh.Lng, sh.Lat, sh.DeviceID})
+                                    SQLCmd(sqlTmp)
+                                Catch ex As Exception
 
-                            End Try
+                                End Try
+                            End If
+                            '   log("收到TSS设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
                         Else
                             If flagHaveGPSStatus Then
                                 log("收到TSS设备上报经纬度字段，id=" & myDeviceInfo.DeviceID)
@@ -1263,7 +1272,14 @@ Public Class DeviceTSS
         If Val(lng) <= 0 Or Val(lat) <= 0 Then Return False
         Return True
     End Function
-    Private Sub handlePinPuFenXi(ByVal deviceID As String, ByVal PinPuShuJu() As Byte, runLocationJson As String)
+    Public Sub SetmyRunLocation(runlocation As RunLocation)
+        If IsNothing(runlocation) = False Then
+            SyncLock myRunLocationLock
+                Me.myRunLocation = runlocation
+            End SyncLock
+        End If
+    End Sub
+    Private Sub handlePinPuFenXi(ByVal deviceID As String, ByVal PinPuShuJu() As Byte, canshuqu As String)
         Try
 
             Dim p As ppsj = shuju2ppsj(PinPuShuJu)
@@ -1346,10 +1362,7 @@ Public Class DeviceTSS
                 jsonPP.deviceID = myDeviceInfo.DeviceID
                 jsonPP.value = yy
                 jsonPP.runLocation = Nothing
-                'If myDeviceInfo.Name = "长安上沙站" Then
-                '    log("饮用前freqStart=" & jsonPP.freqStart)
-                '    log("饮用前freqStep=" & jsonPP.freqStep)
-                'End If
+
                 DailyFreqHelper.OnDeviceFreq(jsonPP.Copy, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
                 Dim maxCount As Integer = 5000
@@ -1381,54 +1394,18 @@ Public Class DeviceTSS
                     jsonPP.DSGFreqBase64 = PPSJValues2DSGBase(jsonPP.value)
                     jsonPP.value = Nothing
                 End If
-                If myDeviceInfo.RunKind = "car" Then
-                    SyncLock myRunLocationLock
-                        runLocationJson = JsonConvert.SerializeObject(myRunLocation)
-                    End SyncLock
-                End If
+
                 If myDeviceInfo.RunKind = "bus" Or myDeviceInfo.RunKind = "car" Then
-                    If runLocationJson <> "" Then
+                    If IsNothing(myRunLocation) = False Then
                         Try
                             Try
                                 ''更新公交实时经纬度
-                                Dim rlc As RunLocation = JsonConvert.DeserializeObject(runLocationJson, GetType(RunLocation))
+                                Dim rlc As RunLocation = myRunLocation
                                 rlc.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                Dim isRefrushGPS As Boolean = False
-                                Dim bool As Boolean = CheckLocation(rlc.lng, rlc.lat)
-                                'bool = False
-                                If bool Then
-                                    If myDeviceInfo.RunKind = "bus" Then
-                                        Dim coordes As String = rlc.lng & "," & rlc.lat
-                                        Dim wdpoints As CoordInfo = GPS2BDS(rlc.lng, rlc.lat)
-                                        If IsNothing(wdpoints) = False Then
-                                            rlc.lng = wdpoints.x
-                                            rlc.lat = wdpoints.y
-                                            isRefrushGPS = True
-                                        End If
-                                    End If
-                                Else
-                                    SyncLock myRunLocationLock
-                                        If IsNothing(myRunLocation) = False Then
-                                            rlc = myRunLocation
-                                        End If
-                                    End SyncLock
-                                End If
+                                Dim isRefrushGPS As Boolean = CheckLocation(rlc.lng, rlc.lat)
                                 jsonPP.runLocation = rlc
-                                isRefrushGPS = CheckLocation(rlc.lng, rlc.lat)
                                 Dim sqlTmp As String = ""
                                 If isRefrushGPS Then
-                                    SyncLock TekBusDevicesLock
-                                        For i = 0 To TekBusDevices.Count - 1
-                                            Dim itm As TekBusDeviceInfo = TekBusDevices(i)
-                                            If itm.TekDeviceId = myDeviceInfo.DeviceID Then
-                                                itm.gpsTime = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                                itm.TekCoordinfo = New CoordInfo(rlc.lng, rlc.lat)
-                                                itm.freqJson = jsonPP
-                                                TekBusDevices(i) = itm
-                                                Exit For
-                                            End If
-                                        Next
-                                    End SyncLock
                                     If myDeviceInfo.RunKind = "bus" Then
                                         sqlTmp = "update BusLineTable set time='{0}',lng='{1}',lat='{2}' where DeviceID='{3}'"
                                         sqlTmp = String.Format(sqlTmp, New String() {Now.ToString("yyyy-MM-dd HH:mm:ss"), rlc.lng, rlc.lat, myDeviceInfo.DeviceID})
@@ -2429,40 +2406,7 @@ Public Class DeviceTSS
             Catch ex As Exception
                 log(ex.ToString)
             End Try
-            Try
-                If myDeviceInfo.RunKind = "bus" Then
-                    Dim th As New Thread(Sub()
-                                             If TekGateWayDik.ContainsKey(myDeviceInfo.DeviceID) = False Then Return
-                                             Dim gateWayDeviceId As String = TekGateWayDik(myDeviceInfo.DeviceID)
-                                             Dim result As String = GetGateWayLocation(gateWayDeviceId)
-                                             log(myDeviceInfo.DeviceID & " 获取网关 " & gateWayDeviceId & " 经纬度，result=" & result)
-                                             If result = "" Then Return
-                                             If result.Contains(",") = False Then Return
-                                             Dim st() As String = result.Split(",")
-                                             If st.Length <> 2 Then Return
-                                             Dim lng As String = st(0)
-                                             Dim lat As String = st(1)
-                                             If IsNumeric(lng) = False Then Return
-                                             If IsNumeric(lat) = False Then Return
-                                             If lng = 0 Or lat = 0 Then Return
-                                             'Dim wdpoints As CoordInfo = GPS2BDS(lng, lat)
-                                             'If IsNothing(wdpoints) = False Then
-                                             '    lng = wdpoints.x
-                                             '    lat = wdpoints.y
-                                             'End If
-                                             SyncLock myRunLocationLock
-                                                 If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
-                                                 myRunLocation.lng = lng
-                                                 myRunLocation.lat = lat
-                                                 myRunLocation.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                             End SyncLock
-                                         End Sub)
-                    th.Start()
-                End If
 
-            Catch ex As Exception
-
-            End Try
             Try
                 num = num + 1
                 If num = 20 Then

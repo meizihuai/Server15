@@ -26,11 +26,12 @@ Module Module2
     Public myServerInfoLock As Object
     Public MZHHandle As MZH_TSS_Handle
     Public flag_MzhHandle As Boolean
-    Public TekGateWay() As String = New String() {"DSG-GW0100", "DSG-GW0101", "DSG-GW0102", "DSG-GW0103"}
+    Public TekGateWay() As String = New String() {"DSG-GW0100", "DSG-GW0101", "DSG-GW0102", "DSG-GW0103", "DSG-GW0107", "DSG-GW0108"}
     Public TekBusDevicesLock As New Object
     Public TekBusDevices() As TekBusDeviceInfo = New TekBusDeviceInfo() {New TekBusDeviceInfo("Tek180509", "DSG-GW0102", "DSG_DH0043"),
                                                                          New TekBusDeviceInfo("Tek180510", "DSG-GW0103", ""),
                                                                          New TekBusDeviceInfo("Tek180511", "DSG-GW0100", ""),
+                                                                         New TekBusDeviceInfo("Tek180502", "DSG-GW0107", ""),
                                                                          New TekBusDeviceInfo("Tek180512", "DSG-GW0101", "DSG_DH0044")}
     'Public Structure normalResponse 'json回复格式
     '    Public result As Boolean
@@ -189,6 +190,7 @@ Module Module2
         Dim Func As String
         Dim RunKind As String
         Dim isNetGateWay As Boolean
+        Dim DSGWGstatus As GateWayStatusInfo
         Dim NetDeviceID As String
         Dim NetGateWayID As String
         Dim NetSwitch As Integer
@@ -1039,7 +1041,7 @@ Module Module2
     Public Sub AddDeviceLog(ByVal DeviceID As String, ByVal DeviceName As String, ByVal Address As String, ByVal Log As String, ByVal result As String, ByVal status As String)
         Try
             Dim Time As String = Now.ToString("yyyy-MM-dd HH:mm:ss")
-            Dim sql As String = "insert into DeviceLogTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}')"
+            Dim sql As String = "insert into DeviceLogTable (time,deviceId,deviceNickName,Address,Log,Result,Status) values('{0}','{1}','{2}','{3}','{4}','{5}','{6}')"
             sql = String.Format(sql, New String() {Time, DeviceID, DeviceName, Address, Log, result, status})
             SQLCmd(sql)
         Catch ex As Exception
@@ -1170,6 +1172,7 @@ Module Module2
             t.Port = itm.Port
             t.RunKind = itm.RunKind
             t.Func = itm.Func
+            t.DSGWGstatus = itm.DSGWGstatus
             t.isNetGateWay = itm.isNetGateWay
             t.NetDeviceID = itm.NetDeviceID
             t.NetGateWayID = itm.NetGateWayID

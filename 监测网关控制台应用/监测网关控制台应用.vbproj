@@ -142,6 +142,7 @@
     <Compile Include="Devices\TZBQServer.vb" />
     <Compile Include="Devices\WebSocketServer.vb" />
     <Compile Include="StucClass\DeviceStu.vb" />
+    <Compile Include="StucClass\GateWayStatusInfo.vb" />
     <Compile Include="StucClass\json_PPSJ.vb" />
     <Compile Include="StucClass\NormalTaskStu.vb" />
     <Compile Include="StucClass\runLocation.vb" />

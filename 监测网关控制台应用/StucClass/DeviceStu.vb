@@ -16,6 +16,7 @@
     Public NetDeviceID As String
     Public NetGateWayID As String
     Public NetSwitch As Integer
+    Public DSGWGstatus As GateWayStatusInfo
     Public HTTPMsgUrl As String
     Public WebSocketUrl As String
     Public cls As Object
