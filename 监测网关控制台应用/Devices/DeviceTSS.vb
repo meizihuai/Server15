@@ -247,12 +247,12 @@ Public Class DeviceTSS
                         'sqlTmp = String.Format(sqlTmp, New String() {Now.ToString("yyyy-MM-dd HH:mm:ss"), id})
                         'SQLCmd(sqlTmp)
                     Else
-                        Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')"
+                        Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
                         insertSql = String.Format(insertSql, New String() {0, "线路_" & id, "", "", id, DeviceName, "", "", "", Now.ToString("yyyy-MM-dd HH:mm:ss")})
                         SQLCmd(insertSql)
                     End If
                 Else
-                    Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')"
+                    Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
                     insertSql = String.Format(insertSql, New String() {0, "线路_" & id, "", "", id, DeviceName, "", "", "", Now.ToString("yyyy-MM-dd HH:mm:ss")})
                     SQLCmd(insertSql)
                 End If

@@ -26,10 +26,10 @@ Module Module2
     Public myServerInfoLock As Object
     Public MZHHandle As MZH_TSS_Handle
     Public flag_MzhHandle As Boolean
-    Public TekGateWay() As String = New String() {"DSG-GW0100", "DSG-GW0101", "DSG-GW0102", "DSG-GW0103", "DSG-GW0107", "DSG-GW0108"}
+    Public TekGateWay() As String = New String() {"DSG-GW0100", "DSG-GW0101", "DSG-GW0102", "DSG-GW0106", "DSG-GW0107", "DSG-GW0108"}
     Public TekBusDevicesLock As New Object
     Public TekBusDevices() As TekBusDeviceInfo = New TekBusDeviceInfo() {New TekBusDeviceInfo("Tek180509", "DSG-GW0102", "DSG_DH0043"),
-                                                                         New TekBusDeviceInfo("Tek180510", "DSG-GW0103", ""),
+                                                                         New TekBusDeviceInfo("Tek180510", "DSG-GW0108", ""),
                                                                          New TekBusDeviceInfo("Tek180511", "DSG-GW0100", ""),
                                                                          New TekBusDeviceInfo("Tek180502", "DSG-GW0107", ""),
                                                                          New TekBusDeviceInfo("Tek180512", "DSG-GW0101", "DSG_DH0044")}
