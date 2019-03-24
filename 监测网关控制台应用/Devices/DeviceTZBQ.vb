@@ -667,10 +667,12 @@ Public Class DeviceTZBQ
                 End SyncLock
                 '没有单个任务，查询所有未完成任务看有无多设备任务
                 dt = Nothing
-                dt = SQLGetDT("select * from UserTaskTable Where EndTime >'" & Now.ToString("yyyy-MM-dd HH:mm:ss") & "' order by StartTime")
+                dt = SQLGetDT("select * from UserTaskTable  EndTime >'" & Now.ToString("yyyy-MM-dd HH:mm:ss") & "' order by StartTime")
                 If IsNothing(dt) = False Then
                     For Each r As DataRow In dt.Rows
-                        Dim TaskDeviceID As String = r("DeviceID")
+                        Dim TaskDeviceID As String = r("DeviceID").ToString
+                        Dim taskName As String = r("TaskName").ToString
+                        If taskName <> "POA定位" Then Continue For
                         Dim list As List(Of String) = JsonConvert.DeserializeObject(TaskDeviceID, GetType(List(Of String)))
                         If IsNothing(list) = False Then
                             For j = 0 To list.Count - 1
@@ -688,7 +690,7 @@ Public Class DeviceTZBQ
                                         AddMyLog("查询任务", "成功,有待执行任务，并开始处理")
                                         SyncLock DeviceListLock
                                             For i = 0 To DeviceList.Count - 1
-                                                Dim itm As deviceStu = DeviceList(i)
+                                                Dim itm As DeviceStu = DeviceList(i)
                                                 If itm.DeviceID = myDeviceInfo.DeviceID Then
                                                     itm.Statu = "working"
                                                     DeviceList(i) = itm

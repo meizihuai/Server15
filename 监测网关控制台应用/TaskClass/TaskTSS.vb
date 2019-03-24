@@ -1497,27 +1497,7 @@ Public Class TaskTSS
     Private Sub TaskLog(ByVal str As String)
         'Dim sr As New StreamWriter( Directory.GetCurrentDirectory()  & "\Task\TaskLog\" & mydeviceid &
     End Sub
-    Structure json_PPSJ
-        Dim freqStart As Double
-        Dim freqStep As Double
-        Dim freqEnd As Double
-        Dim deviceID As String
-        Dim dataCount As Integer
-        Dim runLocation As runLocation
-        Dim value() As Double
-        Dim isDSGFreq As Boolean
-        Dim DSGFreqBase64 As String
-    End Structure
-    Structure runLocation
-        Dim lng As String
-        Dim lat As String
-        Dim time As String
-        Sub New(ByVal _lng As String, ByVal _lat As String, ByVal _time As String)
-            lng = _lng
-            lat = _lat
-            time = _time
-        End Sub
-    End Structure
+
     Private Function IsInLegalSignal(ByVal v As Double) As Boolean
         If IsNothing(legalSigNal) Then Return False
         If legalSigNal.Count = 0 Then Return False
