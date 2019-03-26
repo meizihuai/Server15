@@ -23,6 +23,7 @@ Imports Newtonsoft.Json.Linq
 Imports System.Deployment
 
 Public Class DeviceTSS
+    Private myRunkind As String = ""
     Private maxSize As Integer = 81920
     Public isWorking As Boolean = False
     Private myControlerVersion As String = "null"
@@ -140,12 +141,24 @@ Public Class DeviceTSS
         End If
     End Function
     Private Sub LoopGetHeartBeat()
+        Dim times As Integer = 10
         While True
             Try
                 SendMsgToTSSDevByString(&H0, "task", "getheartbeat", "", Nothing)
             Catch ex As Exception
 
             End Try
+            Try
+                If times = 10 Then
+                    times = 0
+                    If myRunkind = "bus" Then
+                        SendOrderFreqToDevice(30, 6000, 25, 8, "2to1")
+                    End If
+                End If
+            Catch ex As Exception
+
+            End Try
+            times = times + 1
             Sleep(3 * 1000)
         End While
     End Sub
@@ -165,6 +178,7 @@ Public Class DeviceTSS
         Dim dbLat As String = ""
         Dim myAddress As String = ""
         myAddress = ip2Address(IP)
+        runKind = "" '2019-03-25修改，运行模式靠数据库 维护
         If runKind = "" Then
             Dim sql As String = "select runKind from deviceTable where DeviceId='" & id & "'"
             Dim dt As DataTable = SQLGetDT(sql)
@@ -181,6 +195,7 @@ Public Class DeviceTSS
         Else
             flagNeedGetGPSLoop = False
         End If
+        myRunkind = runKind
         Dim myLA As LocationAddressInfo
         ' myAddress = GetAddressByLngLat()
         Try
@@ -247,12 +262,12 @@ Public Class DeviceTSS
                         'sqlTmp = String.Format(sqlTmp, New String() {Now.ToString("yyyy-MM-dd HH:mm:ss"), id})
                         'SQLCmd(sqlTmp)
                     Else
-                        Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
+                        Dim insertSql As String = "insert into BusLineTable (lineId,lineName,busNo,plateNumber,deviceId,deviceName,lng,lat,location,time,shutdownTime,shutdownVoltage) values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
                         insertSql = String.Format(insertSql, New String() {0, "线路_" & id, "", "", id, DeviceName, "", "", "", Now.ToString("yyyy-MM-dd HH:mm:ss")})
                         SQLCmd(insertSql)
                     End If
                 Else
-                    Dim insertSql As String = "insert into BusLineTable values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
+                    Dim insertSql As String = "insert into BusLineTable (lineId,lineName,busNo,plateNumber,deviceId,deviceName,lng,lat,location,time,shutdownTime,shutdownVoltage) values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','',0)"
                     insertSql = String.Format(insertSql, New String() {0, "线路_" & id, "", "", id, DeviceName, "", "", "", Now.ToString("yyyy-MM-dd HH:mm:ss")})
                     SQLCmd(insertSql)
                 End If
@@ -339,7 +354,6 @@ Public Class DeviceTSS
             AddMyLog("重新上线", "成功")
             log("重新上线TSS设备登录，deviceID=" & id)
             StartHttp(cls)
-
             If flagNeedGetGPSLoop Then
                 Try
                     log("TSSDeviceId=" & id & "runKind=" & runKind & " 开启频繁获取心跳包线程")
@@ -349,7 +363,6 @@ Public Class DeviceTSS
 
                 End Try
             End If
-
             RaiseEvent RefrushDeviceList()
             isFind = True
         End If
@@ -370,20 +383,6 @@ Public Class DeviceTSS
 
                 End Try
             End If
-
-            '    SyncLock myTaskLock
-            '        ReadMyTask()
-            '        If myTask.myWorkFunc = "bscan" Then
-            '            Sleep(2000)
-            '            If myTask.dataType <> "" Then
-            '                If myTask.funcType <> "" Then
-            '                    If myTask.CanShuQu <> "" Then
-            '                        SendMsgToTSSDevByString(&H0, myTask.dataType, myTask.funcType, myTask.CanShuQu, Nothing)
-            '                    End If
-            '                End If
-            '            End If
-            '        End If
-            '    End SyncLock
         End If
 
     End Sub
