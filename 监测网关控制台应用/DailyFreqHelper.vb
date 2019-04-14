@@ -17,6 +17,7 @@ Public Class DailyFreqHelper
     Private Shared dailyFreqLock As New Object
 
     Public Shared Sub StartWork()
+        Return
         log("每日一谱工作器开启")
         workThread = New Thread(AddressOf WorkLoop)
         workThread.Start()
@@ -58,8 +59,8 @@ Public Class DailyFreqHelper
                     If IsNothing(cls) = False Then
                         If cls.isWorking = False Then
                             Dim th As New Thread(Sub()
-                                                     ' log("dailyF work deviceName=" & cls.myDeviceInfo.Name)
-                                                     cls.SendOrderFreqToDevice(dailyFreqStart, dailyFreqEnd, dailyFreqStep * 1000, 8, "2to1")
+                                                     'log("dailyF work deviceName=" & cls.myDeviceInfo.Name)
+                                                     cls.SendOrderFreqToDevice(dailyFreqStart, dailyFreqEnd, dailyFreqStep * 1000, 8, "2to1", "daily")
                                                  End Sub)
                             th.Start()
                         End If

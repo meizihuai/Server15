@@ -173,11 +173,7 @@ Public Class TSS_GateWay
                 End If
             Next
         End SyncLock
-        If TekGateWay.Contains(id) Then
-            flagIsTekGateWay = True
-        Else
-            flagIsTekGateWay = False
-        End If
+        flagIsTekGateWay = True
         If isJXX Then '如果是挤下线 
             Dim cls As TSS_GateWay = CType(JXXItm.cls, TSS_GateWay) '获取到前者的对象(类)
             cls.CloseALL(True) '前者关闭，并通知朕可以登陆
@@ -531,38 +527,38 @@ Public Class TSS_GateWay
                                 gwsinfo.lat = cinfo.y
                                 deviceGPSReporterLng = cinfo.x
                                 deviceGPSReporterLat = cinfo.y
-                                log("收到网关设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
+                                'log("收到网关设备上报正确经纬度！id=" & myDeviceInfo.DeviceID & "," & deviceGPSReporterLng & "," & deviceGPSReporterLat)
 
                                 sh.Lng = gwsinfo.lon
                                 sh.Lat = gwsinfo.lat
-                                SyncLock TekBusDevicesLock
-                                    For j = 0 To TekBusDevices.Count - 1
-                                        Dim itm As TekBusDeviceInfo = TekBusDevices(j)
-                                        If itm.GwDeviceId = myDeviceInfo.DeviceID Then
-                                            Dim tekDeviceId As String = itm.TekDeviceId
-                                            SyncLock DeviceListLock
-                                                For m = 0 To DeviceList.Count - 1
-                                                    Dim d As DeviceStu = DeviceList(m)
-                                                    If d.DeviceID = tekDeviceId Then
-                                                        Dim cls As DeviceTSS = d.cls
-                                                        If IsNothing(cls) = False Then
-                                                            cls.SetmyRunLocation(New RunLocation(deviceGPSReporterLng, deviceGPSReporterLat, Now.ToString("yyyy-MM-dd HH:mm:ss")))
-                                                        End If
-                                                        Exit For
+                                Dim sql As String = "select * from deviceTable where dsgwgDeviceId='" & myDeviceInfo.DeviceID & "'"
+                                Dim dt As DataTable = SQLGetDT(sql)
+                                If IsNothing(dt) = False AndAlso dt.Rows.Count > 0 Then
+                                    Dim row As DataRow = dt.Rows(0)
+                                    Dim tekDeviceId As String = row("DeviceID").ToString()
+                                    '  log($"网关{myDeviceInfo.DeviceID}网关上报心跳包,对应的使用者DeviceId=" & tekDeviceId)
+                                    If IsNothing(tekDeviceId) = False AndAlso IsDBNull(tekDeviceId) = False And tekDeviceId <> "" Then
+                                        SyncLock DeviceListLock
+                                            For m = 0 To DeviceList.Count - 1
+                                                Dim d As DeviceStu = DeviceList(m)
+                                                If d.DeviceID = tekDeviceId Then
+                                                    Dim cls As DeviceTSS = d.cls
+                                                    If IsNothing(cls) = False Then
+                                                        cls.SetmyRunLocation(New RunLocation(deviceGPSReporterLng, deviceGPSReporterLat, Now.ToString("yyyy-MM-dd HH:mm:ss")))
                                                     End If
-                                                Next
-                                            End SyncLock
-                                            Exit For
-                                        End If
-                                    Next
-                                End SyncLock
+                                                    Exit For
+                                                End If
+                                            Next
+                                        End SyncLock
+                                    End If
+                                End If
                             End If
                             'Dim sqlTmp As String = "update deviceTable set Lng='{0}',Lat='{1}' where DeviceID='{2}'"
                             'sqlTmp = String.Format(sqlTmp, New String() {sh.Lng, sh.Lat, sh.DeviceID})
                             'SQLCmd(sqlTmp)
                         Else
                             If flagHaveGPSStatus Then
-                                log("收到网关设备上报经纬度字段，id=" & myDeviceInfo.DeviceID)
+                                ' log("收到网关设备上报经纬度字段，id=" & myDeviceInfo.DeviceID)
                             End If
                         End If
                     Catch ex As Exception

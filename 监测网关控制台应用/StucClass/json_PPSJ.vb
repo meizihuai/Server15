@@ -1,7 +1,7 @@
 ﻿Public Class json_PPSJ
-    Public freqStart As Double
-    Public freqStep As Double
-    Public freqEnd As Double
+    Public freqStart As Decimal
+    Public freqStep As Decimal
+    Public freqEnd As Decimal
     Public deviceID As String
     Public dataCount As Integer
     Public runLocation As runLocation

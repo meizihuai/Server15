@@ -622,6 +622,7 @@ Public Class HTTPHandle
         Dim endTime As String = context.Request.QueryString("endTime")
         Dim lineId As String = context.Request.QueryString("lineId")
         Dim deviceId As String = context.Request.QueryString("deviceId")
+        Dim countstr As String = context.Request.QueryString("count")
         Try
             Dim dStartTime As Date = Date.Parse(startTime)
             startTime = dStartTime.ToString("yyyy-MM-dd HH:mm:ss")
@@ -634,6 +635,10 @@ Public Class HTTPHandle
         Catch ex As Exception
             Return New NormalResponse(False, "结束时间格式不正确")
         End Try
+        Dim count As Long = 0
+        If IsNothing(countstr) = False AndAlso countstr <> "" AndAlso IsNumeric(countstr) Then
+            count = Val(countstr)
+        End If
         Try
             If IsNothing(lineId) And IsNothing(deviceId) Then Return New NormalResponse(False, "lineId和deviceId不可都为空")
             If lineId = "" And deviceId = "" Then Return New NormalResponse(False, "lineId和deviceId不可都为空")
@@ -645,6 +650,9 @@ Public Class HTTPHandle
             sql = "select msgid,time,freqStart,freqEnd,freqStep,pointCount,lng,lat,freqJsonLen from freqGisTable where lineId=" & lineId & " and time>='" & startTime & "' and time<='" & endTime & "' order by time asc"
             If deviceId <> "" Then
                 sql = "select msgid,time,freqStart,freqEnd,freqStep,pointCount,lng,lat,freqJsonLen from freqGisTable where deviceId='" & deviceId & "' and time>='" & startTime & "' and time<='" & endTime & "'  order by time asc"
+            End If
+            If count > 0 Then
+                sql = sql & " limit " & count
             End If
             Dim dt As DataTable = SQLGetDT(sql)
             If IsNothing(dt) Then Return New NormalResponse(False, "该时段该线路无任何数据", sql, "")
@@ -876,11 +884,11 @@ Public Class HTTPHandle
     Public Function Handle_GetTekBusAllInfo(context As HttpListenerContext) As NormalResponse
         Try
             Dim json As String = ""
-            SyncLock TekBusDevicesLock
-                If IsNothing(TekBusDevices) = False Then
-                    json = JsonConvert.SerializeObject(TekBusDevices)
-                End If
-            End SyncLock
+            'SyncLock TekBusDevicesLock
+            '    If IsNothing(TekBusDevices) = False Then
+            '        json = JsonConvert.SerializeObject(TekBusDevices)
+            '    End If
+            'End SyncLock
             Return New NormalResponse(True, "", "", json)
         Catch ex As Exception
             Return New NormalResponse(False, ex.ToString)

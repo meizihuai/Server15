@@ -109,6 +109,7 @@
     <Compile Include="DailyFreqHelper.vb" />
     <Compile Include="Devices\DeviceTSS.vb" />
     <Compile Include="Devices\DeviceTZBQ.vb" />
+    <Compile Include="LisanInfo.vb" />
     <Compile Include="RMTPClient\RMTPClient.vb" />
     <Compile Include="RMTPClient\RMTPServer.vb" />
     <Compile Include="HTTPHandle.vb" />

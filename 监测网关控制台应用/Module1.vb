@@ -26,7 +26,7 @@ Imports System.IO.Compression
 
 Module Module1
 
-    Dim title As String = "Server14 V1.3.9"
+    Dim title As String = "Server14 V1.4.3"
     Dim StartTime As Date
     Dim logLock As Object
     Dim isAutoScrollLog As Boolean = True

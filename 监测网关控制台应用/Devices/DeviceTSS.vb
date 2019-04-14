@@ -21,10 +21,17 @@ Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports Newtonsoft.Json.Linq
 Imports System.Deployment
+Imports System.Threading.Tasks
 
 Public Class DeviceTSS
+    Public isLiSanSaoMiao As Boolean = False
+    Public lsInfo As LisanInfo
+    Public lsInfoLock As New Object
+
     Private myRunkind As String = ""
     Private maxSize As Integer = 81920
+    Private isNeedAutoStopDevice As Boolean = True
+    Private autoStopDeviceTime As Date = Now.AddMinutes(1)
     Public isWorking As Boolean = False
     Private myControlerVersion As String = "null"
     Private workingTask As New NormalTaskStu
@@ -152,7 +159,7 @@ Public Class DeviceTSS
                 If times = 10 Then
                     times = 0
                     If myRunkind = "bus" Then
-                        SendOrderFreqToDevice(30, 6000, 25, 8, "2to1")
+                        SendOrderFreqToDevice(30, 6000, 25, 8, "2to1", "bus")
                     End If
                 End If
             Catch ex As Exception
@@ -851,6 +858,37 @@ Public Class DeviceTSS
         Dim tm As tssMsg = byte2tssmsg(by)
         ' Dim base As String = Convert.ToBase64String(by)
         Dim id As String = tm.deviceID
+        Task.Run(Sub()
+                     If isHandledLogin AndAlso IsNothing(myDeviceInfo) = False AndAlso myDeviceInfo.DeviceID <> "" Then
+                         id = myDeviceInfo.DeviceID
+                     End If
+                     Dim nowTime As Date = Now
+                     Dim isToday As Boolean = False
+                     Dim isMonth As Boolean = False
+                     Dim isYear As Boolean = False
+                     Dim sql As String = $"select LastDateTime from deviceTable where deviceId='{id}'"
+                     Dim lastDateTime As String = SQLInfo(sql)
+                     If lastDateTime.Length > 10 Then
+                         Dim lastDate As Date = nowTime
+                         Date.TryParse(lastDateTime, lastDate)
+                         isYear = (lastDate.Year = nowTime.Year)
+                         If isYear Then
+                             isMonth = (lastDate.Month = nowTime.Month)
+                             If isMonth Then
+                                 isToday = (lastDate.Day = nowTime.Day)
+                             End If
+                         End If
+                     End If
+                     lastDateTime = nowTime.ToString("yyyy-MM-dd HH:mm:ss")
+                     Dim thisLength As Double = by.Length
+                     thisLength = thisLength / 1024
+                     thisLength = Math.Round(thisLength, 2)
+                     If isToday = False Then SQLCmd($"update deviceTable set todayFlow=0 where deviceId='{id}'")
+                     If isMonth = False Then SQLCmd($"update deviceTable set MonthFlow=0 where deviceId='{id}'")
+                     If isYear = False Then SQLCmd($"update deviceTable set YearFlow=0 where deviceId='{id}'")
+                     SQLCmd($"update deviceTable set LastDateTime='{lastDateTime}', YearFlow=YearFlow+{thisLength},MonthFlow=MonthFlow+{thisLength},todayFlow=todayFlow+{thisLength} where deviceId='{id}'")
+                 End Sub)
+
         ' log("<接收TSS_Dev> id=" & id & ",datatype=" & tm.datatype & "," & "functype=" & tm.functype)
         'If tm.deviceID = "0120170003" Then
         '    log("TSS->" & tm.deviceID & "->")
@@ -1064,17 +1102,7 @@ Public Class DeviceTSS
                                 deviceGPSReporterLat = cinfo.y
                                 sh.Lng = deviceGPSReporterLng
                                 sh.Lat = deviceGPSReporterLat
-                                SyncLock TekBusDevicesLock
-                                    For j = 0 To TekBusDevices.Count - 1
-                                        Dim itm As TekBusDeviceInfo = TekBusDevices(j)
-                                        If itm.HDeviceId = myDeviceInfo.DeviceID Then
-                                            itm.gpsTime = Now.ToString("yyyy-MM-dd HH:mm:ss")
-                                            itm.HkCoordinfo = cinfo
-                                            TekBusDevices(j) = itm
-                                            Exit For
-                                        End If
-                                    Next
-                                End SyncLock
+
                                 SyncLock myRunLocationLock
                                     If IsNothing(myRunLocation) Then myRunLocation = New RunLocation
                                     myRunLocation.lng = sh.Lng
@@ -1275,12 +1303,17 @@ Public Class DeviceTSS
         If IsNothing(runlocation) = False Then
             SyncLock myRunLocationLock
                 Me.myRunLocation = runlocation
+                myDeviceInfo.Lng = runlocation.lng
+                myDeviceInfo.Lat = runlocation.lat
+                Dim sqlTmp As String = "update deviceTable set Lng='{0}',Lat='{1}' where DeviceID='{2}'"
+                sqlTmp = String.Format(sqlTmp, New String() {runlocation.lng, runlocation.lat, myDeviceInfo.DeviceID})
+                SQLCmd(sqlTmp)
             End SyncLock
         End If
     End Sub
     Private Sub handlePinPuFenXi(ByVal deviceID As String, ByVal PinPuShuJu() As Byte, canshuqu As String)
         Try
-
+            '  log($"TSS设备，{deviceID}，上报频谱数据")
             Dim p As ppsj = shuju2ppsj(PinPuShuJu)
             Dim qishi As Double = p.qishipinlv
             Dim bujin As Double = p.bujin
@@ -1323,6 +1356,16 @@ Public Class DeviceTSS
             If xx.Count <> yy.Count Then Return
             If xx.Count = 0 Or yy.Count = 0 Then Return
 
+
+            Task.Run(Sub()
+                         SyncLock lsInfoLock
+                             If isLiSanSaoMiao Then
+                                 HandleLisanFreq(xx, yy)
+                             End If
+                         End SyncLock
+                     End Sub)
+
+
             If flagHaveMyFreqInfo Then
                 If myFreqInfo.freqStart = xx(0) Then
                     If Not myFreqInfo.freqEnd = xx(xx.Count - 1) Then
@@ -1352,7 +1395,6 @@ Public Class DeviceTSS
             If IsNothing(yy) Then Exit Sub
             jieshu = xx(xx.Count - 1)
             If isTZBQ_JCPD = False Then
-
                 Dim jsonPP As New json_PPSJ
                 jsonPP.freqStart = qishi
                 jsonPP.freqStep = bujin
@@ -1485,26 +1527,7 @@ Public Class DeviceTSS
                         End Try
                     End If
                 End If
-
                 Dim tmpMsg As String = JsonConvert.SerializeObject(jsonPP)
-                'Dim oldFreqLen As Single = tmpMsg.Length
-                'If iscreatNewDSGFreqModule = False Then
-                '    Dim tmpPP As json_PPSJ
-                '    tmpPP.freqStart = jsonPP.freqStart
-                '    tmpPP.freqStep = jsonPP.freqStep
-                '    tmpPP.dataCount = jsonPP.dataCount
-                '    tmpPP.deviceID = jsonPP.deviceID
-                '    tmpPP.value = jsonPP.value
-                '    tmpPP.isDSGFreq = True
-                '    tmpPP.isDSGFreqChange = True
-                '    tmpPP.isDSGFreqModule = False
-                '    tmpPP.DSGFreqModuleId = DSGFreqModule.DSGFreqModuleId
-                '    Dim list As New List(Of DSGFreqStu)
-                '    For i = 0 To DSGFreqModule.yy.Count - 1
-                '        Dim ModuleValue As Double = DSGFreqModule.yy(i)
-                '        Dim newValue As Double = tmpPP.value(i)
-                '    Next
-                'End If
                 Dim jsonmsg As JSON_Msg
                 jsonmsg.func = "bscan"
                 jsonmsg.msg = tmpMsg
@@ -1634,6 +1657,74 @@ Public Class DeviceTSS
         Catch ex As Exception
             log(ex.ToString)
         End Try
+    End Sub
+    Private Sub HandleLisanFreq(xx() As Double, yy() As Double)
+        '  log("lsInfo.pointlist step=1")
+        If IsNothing(xx) Or IsNothing(yy) Then Return
+        If xx.Length <> yy.Length Then Return
+        Dim maxhfdbm As Double = -70
+        ' log("lsInfo.pointlist step=2")
+        SyncLock lsInfoLock
+            If isLiSanSaoMiao = False Then Return
+            If IsNothing(lsInfo) Then Return
+            If xx(0) <> lsInfo.freqStart Then Return
+            'log("lsInfo.pointlist step=3")
+
+            If xx(xx.Length - 1).ToString() = (lsInfo.freqEnd - 0.025).ToString() Or xx(xx.Length - 1).ToString() = lsInfo.freqEnd.ToString() Then
+
+            Else
+                '   log($"lsInfo.pointlist step=3.5,最后一个={xx(xx.Length - 1) },lsInfo.freqEnd={lsInfo.freqEnd}")
+                Return
+            End If
+            If IsNothing(lsInfo.pointlist) Then
+                Return
+            Else
+                'log($"lsInfo.pointlist step=3.6,lsInfo.pointlist is null")
+            End If
+            '  log("lsInfo.pointlist step=4")
+            lsInfo.watchTime = lsInfo.watchTime + 1
+            Dim runIndex As Integer = 0
+            For Each itm In lsInfo.pointlist
+                Dim freq As Double = itm.freq
+                Dim cz As Double = Math.Abs(xx(runIndex) - freq)
+                itm.dbm = yy(0)
+                For i = runIndex + 1 To xx.Length - 1
+                    Dim tcz As Double = Math.Abs(xx(i) - freq)
+                    If tcz <= cz Then
+                        cz = tcz
+                        itm.dbm = yy(i)
+                    Else
+                        runIndex = i - 1
+                        Exit For
+                    End If
+                    If i = xx.Length - 1 Then
+                        runIndex = i
+                    End If
+                Next
+                If itm.dbm_avg = 0 Then itm.dbm_avg = itm.dbm
+                If itm.dbm_max = 0 Then itm.dbm_max = itm.dbm
+                If itm.dbm_min = 0 Then itm.dbm_min = itm.dbm
+                If itm.dbm_max < itm.dbm Then itm.dbm_max = itm.dbm
+                If itm.dbm_min > itm.dbm Then itm.dbm_min = itm.dbm
+                itm.sigNalInfo = "正常"
+                itm.sigNalStatus = "正常"
+                itm.dbm_avg = Math.Round((itm.dbm + itm.dbm_avg) * 0.5, 2)
+                If itm.dbm > maxhfdbm Then
+                    itm.overCount = itm.overCount + 1
+                    itm.overPercent = 100 * itm.overPercent / lsInfo.watchTime
+                End If
+                itm.isFree = (itm.overPercent < 30)
+            Next
+            Dim jsonmsg As JSON_Msg
+            jsonmsg.func = "lisan"
+            jsonmsg.msg = JsonConvert.SerializeObject(lsInfo)
+            Dim deviceMsg As String = JsonConvert.SerializeObject(jsonmsg)
+            AddDeviceMsg(deviceMsg)
+            ' log("lsInfo.pointlist step=5")
+        End SyncLock
+
+
+
     End Sub
     Private Function IsInLegalSignal(ByVal v As Double) As Boolean
         If IsNothing(legalSigNal) Then Return False
@@ -2054,7 +2145,22 @@ Public Class DeviceTSS
 
         End Try
     End Sub
-    Public Function SendOrderFreqToDevice(freqStart As Double, freqEnd As Double, freqStep As Double, gcValue As Double, DHDevice As String) As String
+    Public Function SendOrderFreqToDevice(freqStart As Double, freqEnd As Double, freqStep As Double, gcValue As Double, DHDevice As String, Optional fromInfo As String = "") As String
+        isNeedAutoStopDevice = True
+        If fromInfo = "normalOrder" Then
+            '命令来自前台下发任务
+            autoStopDeviceTime = Now.AddMinutes(10)
+            'autoStopDeviceTime = Now.AddSeconds(10)
+        End If
+        If fromInfo = "daily" Then
+            '命令来自每日一谱
+            autoStopDeviceTime = Now.AddMinutes(1)
+        End If
+        If fromInfo = "bus" Then
+            '命令来自公交系统
+            autoStopDeviceTime = Now.AddMinutes(10)
+        End If
+
         SendStop2Device()
         Sleep(1000)
         Dim ifbw As String = 40000
@@ -2166,6 +2272,7 @@ Public Class DeviceTSS
                 End Try
             End If
             If func = "tssOrder" Then
+
                 If isWorking Then
                     AddMyLog("接收一般命令", "失败,设备正在执行任务")
                     response(context, "result=fail;msg=设备正在执行任务;errMsg=" & "null" & ";advise=")
@@ -2176,24 +2283,28 @@ Public Class DeviceTSS
                     response(context, "result=fail;msg=该设备是公交监测系统，日常监测任务不可改变;errMsg=" & "null" & ";advise=")
                     Exit Sub
                 End If
+
                 Dim msg As String = dataMsg
                 Try
                     Dim tss As tssOrder_stu = JsonConvert.DeserializeObject(msg, GetType(tssOrder_stu))
                     If tss.task = "bscan" Then
-
+                        isLiSanSaoMiao = False
                         AddMyLog("接收一般命令,频谱扫描", "成功")
                         Dim freqbegin As Double = tss.freqStart
                         Dim freqend As Double = tss.freqEnd
                         Dim freqstep As Double = tss.freqStep
-
-                        Dim orderResult As String = SendOrderFreqToDevice(freqbegin, freqend, freqstep, tss.gcValue, tss.DHDevice)
+                        Dim orderResult As String = SendOrderFreqToDevice(freqbegin, freqend, freqstep, tss.gcValue, tss.DHDevice, "normalOrder")
                         response(context, orderResult)
                     End If
                     If tss.task = "stop" Then
+                        isLiSanSaoMiao = False
                         AddMyLog("接收一般命令,停止工作", "成功")
                         response(context, SendMsgToTSSDevByString(&H0, "task", "taskctrl", "<taskctrl:taskstate=stop;>", Nothing))
                     End If
                     If tss.task = "ifscan_wav" Then
+                        isLiSanSaoMiao = False
+                        isNeedAutoStopDevice = True
+                        autoStopDeviceTime = Now.AddMinutes(10)
                         SendStop2Device()
                         Sleep(1000)
                         AddMyLog("接收一般命令,音频解调", "成功")
@@ -2201,6 +2312,53 @@ Public Class DeviceTSS
                         msg = "<ifscan_wav:tasknum=1;freq=" & Text & ";mod_fre=" & Text & ";freqstep=0.15625;ifbw=200;demodmode=FM;demodbw=200;rfwmode=nm;gcmode=fagc;gcvalue=0;returndata=audio;encodetype=pcm;bits=8;returninter=1;detector=real;rfwmode=nm;>"
                         'sendMsgToDev(&H0, "task", "ifscan_wav", msg, Nothing)
                         response(context, SendMsgToTSSDevByString(&H0, "task", "ifscan_wav", msg, Nothing))
+                    End If
+                    If tss.task = "lisan" Then
+                        Try
+                            log($"TSS设备，{myDeviceInfo.DeviceID}，收到离散扫描命令")
+                            Dim list As List(Of Double) = JsonConvert.DeserializeObject(Of List(Of Double))(tss.data)
+                            If IsNothing(list) Then
+                                response(context, JsonConvert.SerializeObject(New NormalResponse(False, "离散扫描数据格式有误")))
+                                Return
+                            End If
+                            list.Sort()
+                            Dim freqstart As Double = list(0)
+                            Dim freqEnd As Double = list(list.Count - 1)
+                            If freqstart < 30 Then
+                                response(context, JsonConvert.SerializeObject(New NormalResponse(False, "频点值不能小于30")))
+                                Return
+                            End If
+                            If freqEnd > 6000 Then
+                                response(context, JsonConvert.SerializeObject(New NormalResponse(False, "频点值不能大于6000")))
+                                Return
+                            End If
+                            Dim orderResult As String = SendOrderFreqToDevice(freqstart, freqEnd, 25, 8, "2to1", "normalOrder")
+                            If orderResult.StartsWith("result=success") Then
+                                SyncLock lsInfoLock
+                                    isLiSanSaoMiao = True
+                                    lsInfo = New LisanInfo
+                                    lsInfo.freqStart = freqstart
+                                    lsInfo.freqEnd = freqEnd
+                                    lsInfo.startTime = Now
+                                    lsInfo.watchTime = 0
+                                    lsInfo.pointlist = New List(Of LisanPointInfo)
+                                    For Each d In list
+                                        Dim p As New LisanPointInfo
+                                        p.freq = d
+                                        p.isFree = True
+                                        lsInfo.pointlist.Add(p)
+                                    Next
+                                End SyncLock
+                                log("TSS设备，" & myDeviceInfo.DeviceID & " 开始离散扫描," & JsonConvert.SerializeObject(lsInfo))
+                                AddMyLog("接收一般命令,离散扫描", "成功")
+                                response(context, JsonConvert.SerializeObject(New NormalResponse(True, "success")))
+                            Else
+                                response(context, JsonConvert.SerializeObject(New NormalResponse(False, orderResult)))
+                            End If
+
+                        Catch ex As Exception
+
+                        End Try
                     End If
                 Catch ex As Exception
                     response(context, "result=fail;msg=null;errMsg=" & ex.Message & ";advise=null")
@@ -2278,7 +2436,13 @@ Public Class DeviceTSS
         End Try
         response(context, "")
     End Sub
-    Public Sub SendStop2Device()
+    Public Sub SendStop2Device(Optional fromInfo As String = "")
+        Dim logstr As String = "发送停止命令"
+        If fromInfo <> "" Then
+            logstr = $"[{fromInfo}]发送停止命令"
+            AddMyLog(logstr, "成功")
+        End If
+
         SendMsgToTSSDevByString(&H0, "task", "taskctrl", "<taskctrl:taskstate=stop;>", Nothing)
     End Sub
     Public Function GetisWorking() As Boolean
@@ -2473,6 +2637,21 @@ Public Class DeviceTSS
                         HeartWatcher = 0
                     End If
                 End If
+            Catch ex As Exception
+
+            End Try
+            Try
+                Task.Run(Sub()
+                             If isWorking = False Then
+                                 If isNeedAutoStopDevice Then
+                                     If Now >= autoStopDeviceTime Then
+                                         SendStop2Device("系统")
+                                         autoStopDeviceTime = Now.AddMinutes(1)
+                                         isNeedAutoStopDevice = False
+                                     End If
+                                 End If
+                             End If
+                         End Sub)
             Catch ex As Exception
 
             End Try
