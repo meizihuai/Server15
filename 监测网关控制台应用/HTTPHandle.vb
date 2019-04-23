@@ -22,17 +22,7 @@ Imports System.Reflection
 Imports 监测网关控制台应用.MainHttpListener
 Imports OfficeOpenXml
 Public Class HTTPHandle
-    Structure json_PPSJ
-        Dim freqStart As Double
-        Dim freqStep As Double
-        Dim freqEnd As Double
-        Dim deviceID As String
-        Dim dataCount As Integer
-        Dim runLocation As runLocation
-        Dim value() As Double
-        Dim isDSGFreq As Boolean
-        Dim DSGFreqBase64 As String
-    End Structure
+
     Structure runLocation
         Dim lng As String
         Dim lat As String
@@ -217,6 +207,7 @@ Public Class HTTPHandle
             jsonPP.DSGFreqBase64 = PPSJValues2DSGBase(jsonPP.value)
             jsonPP.value = Nothing
         End If
+        jsonPP.grid = p.grid
         Dim bfgp As BusFreqGisPPSJJsonInfo
         bfgp.freqStart = dFreqStart
         bfgp.freqEnd = dFreqEnd

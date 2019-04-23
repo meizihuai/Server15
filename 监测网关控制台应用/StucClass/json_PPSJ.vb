@@ -8,6 +8,7 @@
     Public value() As Double
     Public isDSGFreq As Boolean
     Public DSGFreqBase64 As String
+    Public grid As GridInfo
     Public Function Copy() As json_PPSJ
         If IsNothing(Me) Then Return Nothing
         Dim tmp As json_PPSJ = Me.MemberwiseClone

@@ -80,11 +80,17 @@ Module Module2
             Me.y = y
         End Sub
     End Structure
+    Public Function BDS2GPS(x As Double, y As Double) As CoordInfo
+        Dim gps As New PointLatLng(y, x)
+        Dim p As PointLatLng = bd09_To_Gps84(gps)
+        Return New CoordInfo(p.Lng, p.Lat)
+    End Function
     Public Function GPS2BDS(ByVal x As Double, ByVal y As Double) As CoordInfo
         'Dim coords As String = x & "," & y
         'Return GPS2BDS(coords)(0)
         '  ConvertGPS.
         Dim gps As New PointLatLng(y, x)
+
         Dim p As PointLatLng = Gps84_To_bd09(gps)
         Return New CoordInfo(p.Lng, p.Lat)
     End Function
@@ -1245,14 +1251,21 @@ Module Module2
         Return la
     End Function
 
-    Public Function GetGridBySQL(lng As Double, lat As Double) As Integer
-        If lng <= 0 Or lat <= 0 Then Return 0
-        Dim sql As String = "select id from gridTable where startlon<={0} and stoplon>={1} and startlat<={2} and stoplat>={3}"
+    Public Function GetGridBySQL(lng As Double, lat As Double) As GridInfo
+        Dim grid As New GridInfo
+        grid.id = 0
+        If lng <= 0 Or lat <= 0 Then Return grid
+        Dim sql As String = "select id,cm,cu,ct from gridTable where startlon<={0} and stoplon>={1} and startlat<={2} and stoplat>={3}"
         sql = String.Format(sql, New String() {lng, lng, lat, lat})
-        Dim result As String = SQLInfo(sql)
-        If result = "" Then Return 0
-        If IsNumeric(result) = False Then Return 0
-        Return Val(result)
+        Dim dt As DataTable = SQLGetDT(sql)
+        If IsNothing(dt) Then Return grid
+        If dt.Rows.Count = 0 Then Return grid
+        Dim row As DataRow = dt.Rows(0)
+        grid.id = row("id").ToString()
+        grid.cm = row("CM").ToString()
+        grid.cu = row("CU").ToString()
+        grid.ct = row("CT").ToString()
+        Return grid
     End Function
     Public Function GetGateWayLocation(deviceId As String) As String
         If IsNothing(DeviceListLock) Then DeviceListLock = New Object

@@ -1394,7 +1394,9 @@ Public Class DeviceTSS
             If IsNothing(xx) Then Exit Sub
             If IsNothing(yy) Then Exit Sub
             jieshu = xx(xx.Count - 1)
+
             If isTZBQ_JCPD = False Then
+                Dim originalFreqJson As json_PPSJ
                 Dim jsonPP As New json_PPSJ
                 jsonPP.freqStart = qishi
                 jsonPP.freqStep = bujin
@@ -1404,36 +1406,44 @@ Public Class DeviceTSS
                 jsonPP.value = yy
                 jsonPP.runLocation = Nothing
 
+                originalFreqJson = jsonPP.Copy
+
                 DailyFreqHelper.OnDeviceFreq(jsonPP.Copy, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
-                Dim maxCount As Integer = 5000
-                If dataCount > maxCount Then
-                    Dim realValue() As Double = yy
-                    Dim xlist As New List(Of Double)
-                    Dim ylist As New List(Of Double)
-                    Dim st As Integer = Math.Ceiling(dataCount / maxCount)
-                    jsonPP.freqStep = bujin * st
-                    For i = 0 To dataCount - 1 Step st
-                        xlist.Add(qishi + i * bujin)
-                        ylist.Add(realValue(i))
-                    Next
-                    If xlist(xlist.Count - 1) <> qishi + (dataCount - 1) * bujin Then
-                        xlist.Add(qishi + (dataCount - 1) * bujin)
-                        ylist.Add(yy(yy.Length - 1))
+                Dim isReduceCount As Boolean = False
+                If isReduceCount Then
+                    Dim maxCount As Integer = 5000
+                    If dataCount > maxCount Then
+                        Dim realValue() As Double = yy
+                        Dim xlist As New List(Of Double)
+                        Dim ylist As New List(Of Double)
+                        Dim st As Integer = Math.Ceiling(dataCount / maxCount)
+                        jsonPP.freqStep = bujin * st
+                        For i = 0 To dataCount - 1 Step st
+                            xlist.Add(qishi + i * bujin)
+                            ylist.Add(realValue(i))
+                        Next
+                        If xlist(xlist.Count - 1) <> qishi + (dataCount - 1) * bujin Then
+                            xlist.Add(qishi + (dataCount - 1) * bujin)
+                            ylist.Add(yy(yy.Length - 1))
+                        End If
+                        '  xlist(xlist.Count - 1) = xx(xx.Count - 1)
+                        xx = xlist.ToArray
+                        yy = ylist.ToArray
+                        jsonPP.dataCount = yy.Count
+                        jsonPP.value = yy
+                        'jsonPP.isDSGFreq = True
+                        'jsonPP.isDSGFreqModule = True
+                        'jsonPP.DSGFreqModuleId = DSGFreqModule.DSGFreqModuleId
                     End If
-                    '  xlist(xlist.Count - 1) = xx(xx.Count - 1)
-                    xx = xlist.ToArray
-                    yy = ylist.ToArray
-                    jsonPP.dataCount = yy.Count
-                    jsonPP.value = yy
-                    'jsonPP.isDSGFreq = True
-                    'jsonPP.isDSGFreqModule = True
-                    'jsonPP.DSGFreqModuleId = DSGFreqModule.DSGFreqModuleId
                 End If
                 If UseDSGFreq Then
                     jsonPP.isDSGFreq = True
                     jsonPP.DSGFreqBase64 = PPSJValues2DSGBase(jsonPP.value)
                     jsonPP.value = Nothing
+                    originalFreqJson.isDSGFreq = True
+                    originalFreqJson.DSGFreqBase64 = PPSJValues2DSGBase(originalFreqJson.value)
+                    originalFreqJson.value = Nothing
                 End If
 
                 If myDeviceInfo.RunKind = "bus" Or myDeviceInfo.RunKind = "car" Then
@@ -1445,6 +1455,7 @@ Public Class DeviceTSS
                                 rlc.time = Now.ToString("yyyy-MM-dd HH:mm:ss")
                                 Dim isRefrushGPS As Boolean = CheckLocation(rlc.lng, rlc.lat)
                                 jsonPP.runLocation = rlc
+                                originalFreqJson.runLocation = rlc
                                 Dim sqlTmp As String = ""
                                 If isRefrushGPS Then
                                     If myDeviceInfo.RunKind = "bus" Then
@@ -1478,8 +1489,8 @@ Public Class DeviceTSS
 
                                         Dim tmpJsonPP As json_PPSJ = jsonPP
                                         Dim sql As String = "insert into freqGisTable values('0','{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}')"
-                                        sql = "insert into freqGisTable (type,lineid,date,time,freqStart,freqEnd,freqStep,pointCount,freqJson,lng,lat,freqJsonLen,isDSGFreq,grid,deviceId,runKind) values({0})"
-                                        Dim params As String = "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}'"
+                                        sql = "insert into freqGisTable (type,lineid,date,time,freqStart,freqEnd,freqStep,pointCount,freqJson,lng,lat,freqJsonLen,isDSGFreq,grid,deviceId,runKind,originalFreqJson) values({0})"
+                                        Dim params As String = "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}'"
                                         Dim strList As New List(Of String)
                                         strList.Add(1)
                                         If freqGisBusLineId = "" Then freqGisBusLineId = 0
@@ -1501,6 +1512,11 @@ Public Class DeviceTSS
                                         '        isUseDSGFreq = False
                                         '    End If
                                         'End If
+                                        Dim cinfo As CoordInfo = BDS2GPS(tmpJsonPP.runLocation.lng, tmpJsonPP.runLocation.lat)
+                                        Dim gird As GridInfo = GetGridBySQL(cinfo.x, cinfo.y)
+                                        jsonPP.grid = gird
+                                        tmpJsonPP.grid = gird
+                                        originalFreqJson.grid = gird
                                         Dim jsonTmpJsonPP As String = JsonConvert.SerializeObject(tmpJsonPP)
                                         strList.Add(jsonTmpJsonPP)
                                         strList.Add(tmpJsonPP.runLocation.lng)
@@ -1511,9 +1527,12 @@ Public Class DeviceTSS
                                         Else
                                             strList.Add(0)
                                         End If
-                                        strList.Add(GetGridBySQL(tmpJsonPP.runLocation.lng, tmpJsonPP.runLocation.lat))
+
+
+                                        strList.Add(gird.id)
                                         strList.Add(myDeviceInfo.DeviceID)
                                         strList.Add(myDeviceInfo.RunKind)
+                                        strList.Add(JsonConvert.SerializeObject(originalFreqJson))
                                         params = String.Format(params, strList.ToArray())
                                         sql = String.Format(sql, params)
                                         Dim result As String = SQLCmd(sql)
