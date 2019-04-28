@@ -1410,7 +1410,7 @@ Public Class DeviceTSS
 
                 DailyFreqHelper.OnDeviceFreq(jsonPP.Copy, myDeviceInfo)
                 Dim dataCount As Integer = yy.Count
-                Dim isReduceCount As Boolean = False
+                Dim isReduceCount As Boolean = True
                 If isReduceCount Then
                     Dim maxCount As Integer = 5000
                     If dataCount > maxCount Then
