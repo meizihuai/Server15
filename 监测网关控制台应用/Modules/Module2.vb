@@ -474,23 +474,23 @@ Module Module2
         Array.Copy(BitConverter.GetBytes(tm.canshuquchangdu), 0, by, 54, 2)
         Array.Copy(BitConverter.GetBytes(tm.shujuquchangdu), 0, by, 56, 4)
         '时标
-        Dim de As Date = Now
-        Dim yy As Integer = de.ToString("yy")
-        Dim MM As Integer = de.ToString("MM")
-        Dim dd As Integer = de.ToString("dd")
-        Dim HH As Integer = de.ToString("HH")
-        Dim m As Integer = de.ToString("mm")
-        Dim ss As Integer = de.ToString("ss")
-        Array.Copy(New Byte() {Format(yy, "00")}, 0, by, 60, 1)
-        Array.Copy(New Byte() {Format(MM, "00")}, 0, by, 61, 1)
-        Array.Copy(New Byte() {Format(dd, "00")}, 0, by, 62, 1)
-        Array.Copy(New Byte() {Format(HH, "00")}, 0, by, 63, 1)
-        Array.Copy(New Byte() {Format(m, "00")}, 0, by, 64, 1)
-        Array.Copy(New Byte() {Format(ss, "00")}, 0, by, 65, 1)
-        Dim ms As Short = 0
-        Array.Copy(BitConverter.GetBytes(ms), 0, by, 66, 2)
-        Array.Copy(BitConverter.GetBytes(ms), 0, by, 68, 2)
-        Array.Copy(BitConverter.GetBytes(ms), 0, by, 70, 2)
+        'Dim de As Date = Now
+        'Dim yy As Integer = de.ToString("yy")
+        'Dim MM As Integer = de.ToString("MM")
+        'Dim dd As Integer = de.ToString("dd")
+        'Dim HH As Integer = de.ToString("HH")
+        'Dim m As Integer = de.ToString("mm")
+        'Dim ss As Integer = de.ToString("ss")
+        'Array.Copy(New Byte() {Format(yy, "00")}, 0, by, 60, 1)
+        'Array.Copy(New Byte() {Format(MM, "00")}, 0, by, 61, 1)
+        'Array.Copy(New Byte() {Format(dd, "00")}, 0, by, 62, 1)
+        'Array.Copy(New Byte() {Format(HH, "00")}, 0, by, 63, 1)
+        'Array.Copy(New Byte() {Format(m, "00")}, 0, by, 64, 1)
+        'Array.Copy(New Byte() {Format(ss, "00")}, 0, by, 65, 1)
+        'Dim ms As Short = 0
+        'Array.Copy(BitConverter.GetBytes(ms), 0, by, 66, 2)
+        'Array.Copy(BitConverter.GetBytes(ms), 0, by, 68, 2)
+        'Array.Copy(BitConverter.GetBytes(ms), 0, by, 70, 2)
         Array.Copy(tobyte(tm.deviceID), 0, by, 72, tobyte(tm.deviceID).Length)
         Array.Copy(tobyte(tm.source), 0, by, 82, tobyte(tm.source).Length)
         Array.Copy(tobyte(tm.destination), 0, by, 92, tobyte(tm.destination).Length)
@@ -585,7 +585,7 @@ Module Module2
             End Try
             tm.deviceID = delchr(Encoding.Default.GetString(by, 72, 10))
             tm.source = delchr(Encoding.Default.GetString(by, 82, 10))
-            tm.destination = delchr(Encoding.Default.GetString(by, 82, 10))
+            tm.destination = delchr(Encoding.Default.GetString(by, 92, 10))
             If tm.canshuquchangdu > 0 Then
                 tm.canshuqu = delchr(Encoding.Default.GetString(by, 102, tm.canshuquchangdu))
             End If

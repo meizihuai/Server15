@@ -2526,11 +2526,15 @@ Public Class DeviceTSS
                 End If
             End If
             Dim by() As Byte = tssmsg2byte(tm)
+            'If tm.canshuqu = "<taskctrl:taskstate=stop;>" Then
+            '    File.WriteAllBytes("d:/testStop.bin", by)
+            'End If
+
             If IsNothing(by) Then
                 log("TSSSer.SendData>ERR>Byte[]为空")
                 Return "result=fail;msg=tssMsg Parse file;errMsg=null;advise=check out your parameter"
             End If
-            'log("<发送TSS_Dev> id=" & myDeviceInfo.DeviceID & "," & b & "," & c & "," & d)
+            log("<发送TSS_Dev> id=" & myDeviceInfo.DeviceID & "," & b & "," & c & "," & d & ",字节长度=" & by.Length)
             myClientSocket.Send(by)
             ' log("Success")
             Return "result=success;msg=success;errMsg=null;advise=good"
@@ -2664,7 +2668,7 @@ Public Class DeviceTSS
                              If isWorking = False Then
                                  If isNeedAutoStopDevice Then
                                      If Now >= autoStopDeviceTime Then
-                                         SendStop2Device("系统")
+                                         ' SendStop2Device("系统")
                                          autoStopDeviceTime = Now.AddMinutes(1)
                                          isNeedAutoStopDevice = False
                                      End If

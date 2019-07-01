@@ -1225,7 +1225,6 @@ Public Class TaskTSS
                         BscanList(i) = itm
                     Next
                     Dim firstBscan As json_PPSJ = BscanList(0)
-
                     Dim dataCount As Integer = firstBscan.dataCount
                     Dim xx(dataCount - 1) As Double
                     Dim maxYY(dataCount - 1) As Double
